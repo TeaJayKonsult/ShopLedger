@@ -1,6 +1,5 @@
-// common.js
+// common.js – Firebase, auth, install button, helpers
 
-// Firebase config (replace with your actual config)
 const firebaseConfig = {
   apiKey: "AIzaSyAEV8gjcAv4wTcMwzS9ddm-ooPC8dhBj8Y",
   authDomain: "shopledger-6e10c.firebaseapp.com",
@@ -16,11 +15,11 @@ const db = firebase.firestore();
 const storage = firebase.storage();
 
 let currentUser = null;
-let userRole = null;        // 'admin' or 'cashier'
+let userRole = null;
 let businessSettings = null;
-let storeAdminId = null;     // for cashier: store owner's uid
+let storeAdminId = null;
 
-// ========== PWA Install Button & iOS Banner ==========
+// ========== Install button & iOS banner ==========
 function setupInstallButton() {
   if (document.getElementById('installBtn')) return;
   const style = document.createElement('style');
@@ -46,7 +45,6 @@ function setupInstallButton() {
     }
   `;
   document.head.appendChild(style);
-
   document.body.insertAdjacentHTML('beforeend', `<button id="installBtn" class="perm-install-btn">📲 Install App</button>`);
   document.body.insertAdjacentHTML('beforeend', `
     <div id="iosBanner" class="ios-banner">
@@ -55,15 +53,12 @@ function setupInstallButton() {
       Tap Share (⬆️) then "Add to Home Screen"
     </div>
   `);
-
   const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
   if (isIOS && !isStandalone) document.getElementById('iosBanner').style.display = 'block';
-
   let deferredPrompt = null;
   const installBtn = document.getElementById('installBtn');
   if (window.matchMedia('(display-mode: standalone)').matches && installBtn) installBtn.style.display = 'none';
-
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -84,15 +79,14 @@ function setupInstallButton() {
   }
 }
 
-// ========== Auth & Role Handling ==========
+// ========== Auth & role ==========
 async function checkAndAssignRole(user) {
   const userDoc = await db.collection('users').doc(user.uid).get();
   if (userDoc.exists) {
     userRole = userDoc.data().role;
-    storeAdminId = userDoc.data().storeAdminId || user.uid; // for cashier, storeAdminId is the admin's uid
+    storeAdminId = userDoc.data().storeAdminId || user.uid;
     return;
   }
-  // No user document – check for pending invitation
   const invitationSnap = await db.collection('invitations').where('email', '==', user.email).where('used', '==', false).get();
   if (!invitationSnap.empty) {
     const inv = invitationSnap.docs[0];
@@ -107,7 +101,6 @@ async function checkAndAssignRole(user) {
     });
     await inv.ref.update({ used: true });
   } else {
-    // No invitation – default to admin (store owner)
     userRole = 'admin';
     storeAdminId = user.uid;
     await db.collection('users').doc(user.uid).set({
@@ -133,7 +126,7 @@ async function checkAuth(redirectOnFail = true) {
         currentUser = null;
         userRole = null;
         businessSettings = null;
-        if (redirectOnFail) window.location.href = 'landing.html';
+        if (redirectOnFail) window.location.href = 'index.html';
         resolve(false);
       }
     });
@@ -145,13 +138,10 @@ function redirectToDashboard() {
   else window.location.href = 'cashier.html';
 }
 
-// ========== Invite Cashier (used by admin) ==========
 async function inviteCashier(email) {
   if (!email) return { success: false, message: 'Email required' };
-  // Check if user already exists
   const existingUser = await db.collection('users').where('email', '==', email).get();
   if (!existingUser.empty) return { success: false, message: 'User already registered' };
-  // Create invitation
   await db.collection('invitations').add({
     email: email,
     role: 'cashier',
@@ -162,26 +152,21 @@ async function inviteCashier(email) {
   return { success: true, message: `Invitation sent to ${email}. They can sign up and will automatically become cashier.` };
 }
 
-// ========== Shared Helpers ==========
 function formatMoney(amount) {
   return '₦' + Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
-
 function formatDate(date) {
   if (!date) return '';
   if (typeof date === 'string') date = new Date(date);
   return date.toLocaleDateString('en-NG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
 }
-
 function formatDateTime() {
   return new Date().toLocaleString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
-
 function generateReceiptNumber() {
   return 'SL' + Date.now().toString().slice(-8);
 }
 
-// Expose global functions for inline onclick usage
 window.formatMoney = formatMoney;
 window.formatDate = formatDate;
 window.formatDateTime = formatDateTime;
