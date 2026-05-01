@@ -153,6 +153,8 @@
     .chart-container { height: 200px; margin-bottom: 20px; }
     .report-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f0e6df; }
     .small-text { font-size: 12px; color: #64748b; }
+    .settings-row { margin-bottom: 16px; }
+    .settings-label { font-weight: 600; margin-bottom: 4px; }
   </style>
 </head>
 <body>
@@ -164,6 +166,7 @@
     <button class="tab-btn" data-tab="expenses">💰 Expenses</button>
     <button class="tab-btn" data-tab="staff">👥 Staff</button>
     <button class="tab-btn" data-tab="reports">📈 Reports</button>
+    <button class="tab-btn" data-tab="settings">⚙️ Settings</button>
   </div>
 
   <!-- Dashboard Tab -->
@@ -200,16 +203,34 @@
   <!-- Reports Tab -->
   <div id="reportsTab" class="tab-pane">
     <div class="card"><div class="card-title">Monthly Sales (Last 6 Months)</div><div class="chart-container"><canvas id="salesChart"></canvas></div></div>
+    <div class="card"><div class="card-title">Monthly Summary (Income vs Expenses)</div><div class="chart-container"><canvas id="monthlySummaryChart"></canvas></div><div id="monthlySummaryTable" class="mt-2"></div></div>
     <div class="card"><div class="card-title">Top Selling Products (This Month)</div><div id="topProductsList"></div></div>
     <div class="card"><div class="card-title">Profit by Product (This Month)</div><div id="profitByProductList"></div></div>
     <div class="card"><div class="card-title">Expense Breakdown</div><div class="chart-container"><canvas id="expenseChart"></canvas></div><div id="expenseBreakdownList" class="mt-2"></div></div>
     <div class="card"><div class="card-title">Export Data</div><div class="flex"><button id="exportSalesBtn" class="btn btn-outline">📥 Export Sales (CSV)</button><button id="exportExpensesBtn" class="btn btn-outline">📥 Export Expenses (CSV)</button></div></div>
   </div>
 
+  <!-- Settings Tab -->
+  <div id="settingsTab" class="tab-pane">
+    <div class="card">
+      <div class="card-title">Business Settings</div>
+      <div class="flex" style="justify-content:center; margin-bottom:16px">
+        <img id="settingsLogoPreview" class="logo-preview" style="display:none">
+        <button id="settingsUploadLogoBtn" class="btn-outline" style="width:auto; padding:8px 16px">Upload Logo</button>
+        <input type="file" id="settingsLogoFile" accept="image/*" style="display:none">
+      </div>
+      <div class="settings-row"><div class="settings-label">Business Name</div><input type="text" id="settingsBizName" class="input-field"></div>
+      <div class="settings-row"><div class="settings-label">Phone Number</div><input type="tel" id="settingsBizPhone" class="input-field"></div>
+      <div class="settings-row"><div class="settings-label">Address (including state)</div><textarea id="settingsBizAddress" rows="2" class="input-field"></textarea></div>
+      <button id="saveSettingsBtn" class="btn btn-primary">Save Changes</button>
+      <div id="settingsMsg" class="small-text mt-2"></div>
+    </div>
+  </div>
+
   <footer>© 2026 TeaJay Konsult Ltd.</footer>
 </div>
 
-<!-- Modals -->
+<!-- Modals (same as before) -->
 <div id="addCategoryModal" class="modal"><div class="modal-content"><h3>Add Category</h3><input type="text" id="catName" class="input-field"><button onclick="addCategory()" class="btn btn-primary">Save</button><button onclick="closeModal('addCategoryModal')" class="btn btn-outline">Cancel</button></div></div>
 <div id="addProductModal" class="modal"><div class="modal-content"><h3>Add Product</h3><input type="text" id="prodName" placeholder="Name" class="input-field"><select id="prodCategory" class="input-field"></select><input type="number" id="prodCost" placeholder="Cost price" class="input-field"><input type="number" id="prodPrice" placeholder="Selling price" class="input-field"><input type="number" id="prodStock" placeholder="Initial stock" class="input-field"><input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field"><button onclick="addProduct()" class="btn btn-primary">Save</button><button onclick="closeModal('addProductModal')" class="btn btn-outline">Cancel</button></div></div>
 <div id="addExpenseModal" class="modal"><div class="modal-content"><h3>Add Expense</h3><input type="text" id="expenseName" placeholder="Title" class="input-field"><input type="number" id="expenseAmount" placeholder="Amount" class="input-field"><input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field"><button onclick="addExpense()" class="btn btn-primary">Save</button><button onclick="closeModal('addExpenseModal')" class="btn btn-outline">Cancel</button></div></div>
@@ -219,7 +240,7 @@
 <script>
   // Global state
   let categories = [], products = [], cart = [], lowStockItems = [];
-  let salesChart, expenseChart;
+  let salesChart, monthlySummaryChart, expenseChart;
   let currentStoreId = null;
 
   // DOM elements
@@ -238,12 +259,21 @@
   const inviteBtn = document.getElementById('inviteBtn');
   const inviteMsg = document.getElementById('inviteMsg');
 
-  // Helper: show modal
+  // Settings elements
+  const settingsBizName = document.getElementById('settingsBizName');
+  const settingsBizPhone = document.getElementById('settingsBizPhone');
+  const settingsBizAddress = document.getElementById('settingsBizAddress');
+  const settingsLogoPreview = document.getElementById('settingsLogoPreview');
+  const settingsUploadLogoBtn = document.getElementById('settingsUploadLogoBtn');
+  const settingsLogoFile = document.getElementById('settingsLogoFile');
+  const saveSettingsBtn = document.getElementById('saveSettingsBtn');
+  const settingsMsg = document.getElementById('settingsMsg');
+
   function showModal(id) { document.getElementById(id).classList.add('active'); }
   function closeModal(id) { document.getElementById(id).classList.remove('active'); }
   window.showModal = showModal; window.closeModal = closeModal;
 
-  // Load data from Firestore (using storeAdminId)
+  // Load data
   async function loadData() {
     if (!currentUser) return;
     currentStoreId = storeAdminId;
@@ -262,6 +292,7 @@
     renderCashiers();
     updateCategoryDropdown();
     loadReports();
+    loadSettingsIntoForm();
   }
 
   function renderCategories() {
@@ -451,7 +482,7 @@
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   }
 
-  // Reports
+  // Reports with monthly summary (income vs expenses)
   async function loadReports() {
     if (!currentUser || userRole !== 'admin') return;
     const ownerId = storeAdminId;
@@ -461,6 +492,7 @@
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
       months.push(d);
     }
+    // Sales by month
     const salesByMonth = {};
     for (let m of months) {
       const start = new Date(m.getFullYear(), m.getMonth(), 1);
@@ -477,17 +509,49 @@
       salesByMonth[`${m.getFullYear()}-${m.getMonth()+1}`] = total;
     }
     const labels = months.map(d => d.toLocaleDateString('en-NG', { month: 'short', year: 'numeric' }));
-    const data = labels.map((_, idx) => salesByMonth[`${months[idx].getFullYear()}-${months[idx].getMonth()+1}`] || 0);
+    const salesData = labels.map((_, idx) => salesByMonth[`${months[idx].getFullYear()}-${months[idx].getMonth()+1}`] || 0);
     if (salesChart) salesChart.destroy();
     const ctx = document.getElementById('salesChart').getContext('2d');
     salesChart = new Chart(ctx, {
       type: 'line',
-      data: { labels, datasets: [{ label: 'Sales (₦)', data, borderColor: '#ff7e9e', backgroundColor: 'rgba(255,126,158,0.1)', fill: true }] }
+      data: { labels, datasets: [{ label: 'Sales (₦)', data: salesData, borderColor: '#ff7e9e', backgroundColor: 'rgba(255,126,158,0.1)', fill: true }] }
     });
+
+    // Monthly summary: expenses by month
+    const expensesSnap = await db.collection('expenses').where('storeId', '==', ownerId).get();
+    const expensesByMonth = {};
+    for (let doc of expensesSnap.docs) {
+      const exp = doc.data();
+      if (exp.timestamp) {
+        const date = exp.timestamp.toDate();
+        const key = `${date.getFullYear()}-${date.getMonth()+1}`;
+        expensesByMonth[key] = (expensesByMonth[key] || 0) + exp.amount;
+      }
+    }
+    const monthlyExpenses = labels.map((_, idx) => expensesByMonth[`${months[idx].getFullYear()}-${months[idx].getMonth()+1}`] || 0);
+    const monthlyProfits = salesData.map((s, i) => s - monthlyExpenses[i]);
+    if (monthlySummaryChart) monthlySummaryChart.destroy();
+    const summaryCtx = document.getElementById('monthlySummaryChart').getContext('2d');
+    monthlySummaryChart = new Chart(summaryCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Sales (₦)', data: salesData, backgroundColor: '#ff7e9e' },
+          { label: 'Expenses (₦)', data: monthlyExpenses, backgroundColor: '#a0c4ff' },
+          { label: 'Profit (₦)', data: monthlyProfits, backgroundColor: '#68d391' }
+        ]
+      }
+    });
+    const tableDiv = document.getElementById('monthlySummaryTable');
+    tableDiv.innerHTML = `<div class="report-item"><strong>Month</strong><strong>Sales (₦)</strong><strong>Expenses (₦)</strong><strong>Profit (₦)</strong></div>` +
+      labels.map((l, i) => `<div class="report-item"><span>${l}</span><span>${formatMoney(salesData[i])}</span><span>${formatMoney(monthlyExpenses[i])}</span><span>${formatMoney(monthlyProfits[i])}</span></div>`).join('');
+
+    // Top selling products this month
     const currentMonth = today.toISOString().slice(0,7);
-    const salesSnap = await db.collection('sales').where('storeId', '==', ownerId).get();
+    const allSalesSnap = await db.collection('sales').where('storeId', '==', ownerId).get();
     const productQty = {}, productProfit = {};
-    for (const doc of salesSnap.docs) {
+    for (const doc of allSalesSnap.docs) {
       const sale = doc.data();
       if (sale.date.startsWith(currentMonth)) {
         for (const item of sale.items) {
@@ -503,7 +567,8 @@
     const profitEntries = Object.entries(productProfit).sort((a,b) => b[1] - a[1]);
     const profitDiv = document.getElementById('profitByProductList');
     profitDiv.innerHTML = profitEntries.length ? profitEntries.map(([name, profit]) => `<div class="report-item"><span>${name}</span><span>${formatMoney(profit)}</span></div>`).join('') : '<div class="small-text">No profit data.</div>';
-    const expensesSnap = await db.collection('expenses').where('storeId', '==', ownerId).get();
+
+    // Expense breakdown pie chart
     const expenseCategories = {};
     expensesSnap.forEach(d => { const title = d.data().title; expenseCategories[title] = (expenseCategories[title] || 0) + d.data().amount; });
     const expLabels = Object.keys(expenseCategories);
@@ -517,6 +582,8 @@
     } else {
       document.getElementById('expenseBreakdownList').innerHTML = '<div class="small-text">No expenses recorded.</div>';
     }
+
+    // CSV export buttons
     document.getElementById('exportSalesBtn').onclick = async () => {
       const allSales = await db.collection('sales').where('storeId', '==', ownerId).get();
       let csv = "Date,Amount,Profit,Items\n";
@@ -539,6 +606,54 @@
     link.click();
     URL.revokeObjectURL(link.href);
   }
+
+  // Settings functions
+  function loadSettingsIntoForm() {
+    if (businessSettings) {
+      settingsBizName.value = businessSettings.name || '';
+      settingsBizPhone.value = businessSettings.phone || '';
+      settingsBizAddress.value = businessSettings.address || '';
+      if (businessSettings.logoURL) {
+        settingsLogoPreview.src = businessSettings.logoURL;
+        settingsLogoPreview.style.display = 'block';
+      } else {
+        settingsLogoPreview.style.display = 'none';
+      }
+    }
+  }
+
+  let tempLogoURL = null;
+  settingsUploadLogoBtn.onclick = () => settingsLogoFile.click();
+  settingsLogoFile.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const ref = storage.ref(`logos/${storeAdminId}`);
+    await ref.put(file);
+    const url = await ref.getDownloadURL();
+    tempLogoURL = url;
+    settingsLogoPreview.src = url;
+    settingsLogoPreview.style.display = 'block';
+  };
+
+  saveSettingsBtn.onclick = async () => {
+    const name = settingsBizName.value.trim();
+    const phone = settingsBizPhone.value.trim();
+    const address = settingsBizAddress.value.trim();
+    if (!name || !phone || !address) {
+      settingsMsg.innerText = 'Please fill all fields';
+      return;
+    }
+    const updateData = { name, phone, address };
+    if (tempLogoURL) updateData.logoURL = tempLogoURL;
+    await db.collection('settings').doc(storeAdminId).set(updateData, { merge: true });
+    // Reload businessSettings
+    const bizDoc = await db.collection('settings').doc(storeAdminId).get();
+    businessSettings = bizDoc.data();
+    tempLogoURL = null;
+    loadWelcome();
+    settingsMsg.innerText = 'Settings saved!';
+    setTimeout(() => { settingsMsg.innerText = ''; }, 3000);
+  };
 
   // Invite cashier
   inviteBtn.onclick = async () => {
@@ -563,6 +678,7 @@
       if (tab === 'expenses') renderExpenses();
       if (tab === 'staff') renderCashiers();
       if (tab === 'reports') loadReports();
+      if (tab === 'settings') loadSettingsIntoForm();
     });
   });
 
@@ -571,7 +687,6 @@
   document.getElementById('downloadPdfBtn').addEventListener('click', downloadReceipt);
   document.getElementById('shareReceiptBtn').addEventListener('click', shareReceiptWhatsApp);
 
-  // Load welcome and business settings
   async function loadWelcome() {
     if (businessSettings && businessSettings.name) {
       welcomeDiv.innerHTML = `<img src="${businessSettings.logoURL || ''}" class="logo-preview" onerror="this.style.display='none'"><div><strong>Welcome, ${businessSettings.name}</strong><br>${formatDateTime()}</div>`;
@@ -580,12 +695,11 @@
     }
   }
 
-  // Initial load: check business settings, then load data
+  // Initial load
   window.addEventListener('DOMContentLoaded', async () => {
-    setupInstallButton();
+    if (typeof setupInstallButton === 'function') setupInstallButton();
     const loggedIn = await checkAuth(true);
     if (loggedIn && userRole === 'admin') {
-      // IMPORTANT: redirect if business settings missing
       if (!businessSettings || !businessSettings.name) {
         window.location.href = 'index.html';
         return;
