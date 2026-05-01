@@ -8,7 +8,6 @@
   <meta name="theme-color" content="#fdf8f4">
   <meta name="description" content="ShopLedger – inventory, POS, expenses & professional receipts. Works offline. Built for Nigerian stores.">
   <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
@@ -285,7 +284,7 @@
     </nav>
   </header>
 
-  <!-- Hero with welcome eyebrow -->
+  <!-- Hero -->
   <section class="hero">
     <div class="hero-text">
       <div class="hero-eyebrow">WELCOME TO SHOPLEDGER</div>
@@ -374,6 +373,7 @@
 
 <script src="common.js"></script>
 <script>
+  // Setup install button (common.js)
   window.addEventListener('DOMContentLoaded', () => {
     if (typeof setupInstallButton === 'function') setupInstallButton();
   });
@@ -428,7 +428,13 @@
     const password = document.getElementById('password').value;
     try {
       const cred = await auth.createUserWithEmailAndPassword(email, password);
-      await db.collection('users').doc(cred.user.uid).set({ role: 'admin', email });
+      // IMPORTANT: create user document with storeAdminId = own UID
+      await db.collection('users').doc(cred.user.uid).set({
+        role: 'admin',
+        email: email,
+        storeAdminId: cred.user.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
       await checkAuthAndRedirect();
     } catch (err) {
       authErrorDiv.innerText = err.message;
@@ -438,17 +444,85 @@
   async function checkAuthAndRedirect() {
     const user = auth.currentUser;
     if (!user) return;
+    // Ensure user document exists and has storeAdminId (migration for old users)
+    const userDoc = await db.collection('users').doc(user.uid).get();
+    if (!userDoc.exists) {
+      // should not happen, but just in case
+      await db.collection('users').doc(user.uid).set({
+        email: user.email,
+        role: 'admin',
+        storeAdminId: user.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else if (!userDoc.data().storeAdminId) {
+      await db.collection('users').doc(user.uid).update({ storeAdminId: user.uid });
+    }
     const bizDoc = await db.collection('settings').doc(user.uid).get();
     if (!bizDoc.exists) {
-      window.location.href = 'admin.html';
+      showBusinessSetup();
     } else {
-      const userDoc = await db.collection('users').doc(user.uid).get();
       const role = userDoc.exists ? userDoc.data().role : 'admin';
       if (role === 'admin') window.location.href = 'admin.html';
       else window.location.href = 'cashier.html';
     }
   }
 
+  async function showBusinessSetup() {
+    const appDiv = document.querySelector('.container');
+    // Temporarily hide the rest and show setup form (you can implement as modal or inline)
+    // For simplicity, we'll redirect to a setup page? But we'll create an inline form.
+    // Here we implement a simple modal or replace content? Let's do an inline form.
+    const setupHTML = `
+      <div class="card" style="margin: 20px auto; max-width:500px;">
+        <h2>Business Setup</h2>
+        <p>Tell us about your store</p>
+        <div class="flex" style="justify-content:center; margin-bottom:16px">
+          <img id="logoPreview" class="logo-preview" style="width:80px;height:80px;border-radius:16px;object-fit:cover;display:none">
+          <button id="uploadLogoBtn" class="btn-outline" style="width:auto; padding:8px 16px">Upload Logo</button>
+          <input type="file" id="logoFile" accept="image/*" style="display:none">
+        </div>
+        <div class="form-group"><label>Business Name</label><input type="text" id="bizName" placeholder="e.g. FMJ Stores"></div>
+        <div class="form-group"><label>Phone Number</label><input type="tel" id="bizPhone" placeholder="08012345678"></div>
+        <div class="form-group"><label>Address (including state)</label><textarea id="bizAddress" rows="2" placeholder="e.g. 12 Main Street, Lagos"></textarea></div>
+        <button id="completeSetupBtn" class="btn-primary">Complete Setup</button>
+        <div id="setupError" class="error"></div>
+      </div>
+    `;
+    document.getElementById('authSection').innerHTML = setupHTML;
+    // Logo upload logic
+    const uploadBtn = document.getElementById('uploadLogoBtn');
+    const fileInput = document.getElementById('logoFile');
+    const preview = document.getElementById('logoPreview');
+    let tempLogoURL = null;
+    uploadBtn.onclick = () => fileInput.click();
+    fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const user = auth.currentUser;
+      const storageRef = storage.ref(`logos/${user.uid}`);
+      await storageRef.put(file);
+      const url = await storageRef.getDownloadURL();
+      tempLogoURL = url;
+      preview.src = url;
+      preview.style.display = 'block';
+    };
+    document.getElementById('completeSetupBtn').onclick = async () => {
+      const name = document.getElementById('bizName').value.trim();
+      const phone = document.getElementById('bizPhone').value.trim();
+      const address = document.getElementById('bizAddress').value.trim();
+      if (!name || !phone || !address) {
+        document.getElementById('setupError').innerText = 'Please fill all fields';
+        return;
+      }
+      const user = auth.currentUser;
+      await db.collection('settings').doc(user.uid).set({
+        name, phone, address, logoURL: tempLogoURL || ''
+      });
+      window.location.href = 'admin.html';
+    };
+  }
+
+  // Smooth scroll
   document.getElementById('heroFeatures').addEventListener('click', () => {
     document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
   });
