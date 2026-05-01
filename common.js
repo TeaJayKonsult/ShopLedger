@@ -119,7 +119,9 @@ async function checkAuth(redirectOnFail = true) {
       if (user) {
         currentUser = user;
         await checkAndAssignRole(user);
-        const bizDoc = await db.collection('settings').doc(storeAdminId).get();
+        // Load business settings from settings/{user.uid} for admin, or from settings/{storeAdminId} for cashier
+        const settingsId = (userRole === 'admin') ? user.uid : storeAdminId;
+        const bizDoc = await db.collection('settings').doc(settingsId).get();
         businessSettings = bizDoc.exists ? bizDoc.data() : null;
         resolve(true);
       } else {
@@ -145,7 +147,7 @@ async function inviteCashier(email) {
   await db.collection('invitations').add({
     email: email,
     role: 'cashier',
-    storeAdminId: storeAdminId,
+    storeAdminId: storeAdminId || currentUser.uid,
     used: false,
     createdAt: firebase.firestore.FieldValue.serverTimestamp()
   });
@@ -155,14 +157,17 @@ async function inviteCashier(email) {
 function formatMoney(amount) {
   return '₦' + Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
+
 function formatDate(date) {
   if (!date) return '';
   if (typeof date === 'string') date = new Date(date);
   return date.toLocaleDateString('en-NG', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
 }
+
 function formatDateTime() {
   return new Date().toLocaleString('en-NG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 }
+
 function generateReceiptNumber() {
   return 'SL' + Date.now().toString().slice(-8);
 }

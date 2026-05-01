@@ -230,7 +230,7 @@
   <footer>© 2026 TeaJay Konsult Ltd.</footer>
 </div>
 
-<!-- Modals (same as before) -->
+<!-- Modals -->
 <div id="addCategoryModal" class="modal"><div class="modal-content"><h3>Add Category</h3><input type="text" id="catName" class="input-field"><button onclick="addCategory()" class="btn btn-primary">Save</button><button onclick="closeModal('addCategoryModal')" class="btn btn-outline">Cancel</button></div></div>
 <div id="addProductModal" class="modal"><div class="modal-content"><h3>Add Product</h3><input type="text" id="prodName" placeholder="Name" class="input-field"><select id="prodCategory" class="input-field"></select><input type="number" id="prodCost" placeholder="Cost price" class="input-field"><input type="number" id="prodPrice" placeholder="Selling price" class="input-field"><input type="number" id="prodStock" placeholder="Initial stock" class="input-field"><input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field"><button onclick="addProduct()" class="btn btn-primary">Save</button><button onclick="closeModal('addProductModal')" class="btn btn-outline">Cancel</button></div></div>
 <div id="addExpenseModal" class="modal"><div class="modal-content"><h3>Add Expense</h3><input type="text" id="expenseName" placeholder="Title" class="input-field"><input type="number" id="expenseAmount" placeholder="Amount" class="input-field"><input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field"><button onclick="addExpense()" class="btn btn-primary">Save</button><button onclick="closeModal('addExpenseModal')" class="btn btn-outline">Cancel</button></div></div>
@@ -276,7 +276,7 @@
   // Load data
   async function loadData() {
     if (!currentUser) return;
-    currentStoreId = storeAdminId;
+    currentStoreId = storeAdminId || currentUser.uid;
     const cats = await db.collection('categories').where('storeId', '==', currentStoreId).get();
     categories = cats.docs.map(d => ({ id: d.id, ...d.data() }));
     const prods = await db.collection('products').where('storeId', '==', currentStoreId).get();
@@ -314,7 +314,7 @@
   }
   async function updateDashboard() {
     if (!currentUser) return;
-    const ownerId = storeAdminId;
+    const ownerId = storeAdminId || currentUser.uid;
     const today = new Date().toISOString().slice(0,10);
     const salesSnap = await db.collection('sales').where('storeId', '==', ownerId).where('date', '==', today).get();
     let totalSales = 0, totalProfit = 0;
@@ -324,14 +324,14 @@
   }
   async function renderExpenses() {
     if (!currentUser) return;
-    const ownerId = storeAdminId;
+    const ownerId = storeAdminId || currentUser.uid;
     const snap = await db.collection('expenses').where('storeId', '==', ownerId).orderBy('timestamp', 'desc').get();
     if (snap.empty) { expensesListDiv.innerHTML = '<div>No expenses</div>'; return; }
     expensesListDiv.innerHTML = snap.docs.map(d => `<div class="product-item"><div><strong>${d.data().title}</strong><br>₦${d.data().amount} ${d.data().note ? `- ${d.data().note}` : ''}</div><button onclick="deleteExpense('${d.id}')" class="icon-btn">🗑️</button></div>`).join('');
   }
   async function renderCashiers() {
     if (!currentUser || userRole !== 'admin') return;
-    const usersSnap = await db.collection('users').where('storeAdminId', '==', storeAdminId).where('role', '==', 'cashier').get();
+    const usersSnap = await db.collection('users').where('storeAdminId', '==', storeAdminId || currentUser.uid).where('role', '==', 'cashier').get();
     if (usersSnap.empty) { cashiersListDiv.innerHTML = '<div>No cashiers added yet.</div>'; return; }
     cashiersListDiv.innerHTML = usersSnap.docs.map(d => `<div class="product-item"><div><strong>${d.data().email}</strong><br>Role: Cashier</div></div>`).join('');
   }
@@ -346,7 +346,7 @@
   async function addCategory() {
     const name = document.getElementById('catName').value.trim();
     if (!name) return;
-    await db.collection('categories').add({ storeId: storeAdminId, name });
+    await db.collection('categories').add({ storeId: storeAdminId || currentUser.uid, name });
     closeModal('addCategoryModal');
     document.getElementById('catName').value = '';
     loadData();
@@ -360,7 +360,7 @@
     const stock = parseInt(document.getElementById('prodStock').value);
     const reorder = parseInt(document.getElementById('prodReorder').value) || 10;
     if (!name || !category || isNaN(cost) || isNaN(price)) return;
-    await db.collection('products').add({ storeId: storeAdminId, name, category, cost, price, stock, reorderLevel: reorder });
+    await db.collection('products').add({ storeId: storeAdminId || currentUser.uid, name, category, cost, price, stock, reorderLevel: reorder });
     closeModal('addProductModal');
     document.getElementById('prodName').value = '';
     loadData();
@@ -371,7 +371,7 @@
     const amount = parseFloat(document.getElementById('expenseAmount').value);
     const note = document.getElementById('expenseNote').value;
     if (!title || isNaN(amount)) return;
-    await db.collection('expenses').add({ storeId: storeAdminId, title, amount, note, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+    await db.collection('expenses').add({ storeId: storeAdminId || currentUser.uid, title, amount, note, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
     closeModal('addExpenseModal');
     document.getElementById('expenseName').value = '';
     document.getElementById('expenseAmount').value = '';
@@ -410,7 +410,7 @@
       profit += (item.price - prod.cost) * item.qty;
     }
     const sale = {
-      storeId: storeAdminId,
+      storeId: storeAdminId || currentUser.uid,
       userId: currentUser.uid,
       date: new Date().toISOString().slice(0,10),
       timestamp: firebase.firestore.FieldValue.serverTimestamp(),
@@ -482,17 +482,16 @@
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
   }
 
-  // Reports with monthly summary (income vs expenses)
+  // Reports with monthly summary
   async function loadReports() {
     if (!currentUser || userRole !== 'admin') return;
-    const ownerId = storeAdminId;
+    const ownerId = storeAdminId || currentUser.uid;
     const today = new Date();
     const months = [];
     for (let i = 5; i >= 0; i--) {
       const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
       months.push(d);
     }
-    // Sales by month
     const salesByMonth = {};
     for (let m of months) {
       const start = new Date(m.getFullYear(), m.getMonth(), 1);
@@ -517,7 +516,6 @@
       data: { labels, datasets: [{ label: 'Sales (₦)', data: salesData, borderColor: '#ff7e9e', backgroundColor: 'rgba(255,126,158,0.1)', fill: true }] }
     });
 
-    // Monthly summary: expenses by month
     const expensesSnap = await db.collection('expenses').where('storeId', '==', ownerId).get();
     const expensesByMonth = {};
     for (let doc of expensesSnap.docs) {
@@ -547,7 +545,6 @@
     tableDiv.innerHTML = `<div class="report-item"><strong>Month</strong><strong>Sales (₦)</strong><strong>Expenses (₦)</strong><strong>Profit (₦)</strong></div>` +
       labels.map((l, i) => `<div class="report-item"><span>${l}</span><span>${formatMoney(salesData[i])}</span><span>${formatMoney(monthlyExpenses[i])}</span><span>${formatMoney(monthlyProfits[i])}</span></div>`).join('');
 
-    // Top selling products this month
     const currentMonth = today.toISOString().slice(0,7);
     const allSalesSnap = await db.collection('sales').where('storeId', '==', ownerId).get();
     const productQty = {}, productProfit = {};
@@ -568,7 +565,6 @@
     const profitDiv = document.getElementById('profitByProductList');
     profitDiv.innerHTML = profitEntries.length ? profitEntries.map(([name, profit]) => `<div class="report-item"><span>${name}</span><span>${formatMoney(profit)}</span></div>`).join('') : '<div class="small-text">No profit data.</div>';
 
-    // Expense breakdown pie chart
     const expenseCategories = {};
     expensesSnap.forEach(d => { const title = d.data().title; expenseCategories[title] = (expenseCategories[title] || 0) + d.data().amount; });
     const expLabels = Object.keys(expenseCategories);
@@ -583,7 +579,6 @@
       document.getElementById('expenseBreakdownList').innerHTML = '<div class="small-text">No expenses recorded.</div>';
     }
 
-    // CSV export buttons
     document.getElementById('exportSalesBtn').onclick = async () => {
       const allSales = await db.collection('sales').where('storeId', '==', ownerId).get();
       let csv = "Date,Amount,Profit,Items\n";
@@ -607,7 +602,7 @@
     URL.revokeObjectURL(link.href);
   }
 
-  // Settings functions
+  // ========== SETTINGS SAVE (FIXED – uses currentUser.uid) ==========
   function loadSettingsIntoForm() {
     if (businessSettings) {
       settingsBizName.value = businessSettings.name || '';
@@ -627,12 +622,16 @@
   settingsLogoFile.onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const ref = storage.ref(`logos/${storeAdminId}`);
-    await ref.put(file);
-    const url = await ref.getDownloadURL();
-    tempLogoURL = url;
-    settingsLogoPreview.src = url;
-    settingsLogoPreview.style.display = 'block';
+    try {
+      const ref = storage.ref(`logos/${currentUser.uid}`);
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      tempLogoURL = url;
+      settingsLogoPreview.src = url;
+      settingsLogoPreview.style.display = 'block';
+    } catch (err) {
+      settingsMsg.innerText = 'Logo upload failed: ' + err.message;
+    }
   };
 
   saveSettingsBtn.onclick = async () => {
@@ -643,17 +642,24 @@
       settingsMsg.innerText = 'Please fill all fields';
       return;
     }
-    const updateData = { name, phone, address };
-    if (tempLogoURL) updateData.logoURL = tempLogoURL;
-    await db.collection('settings').doc(storeAdminId).set(updateData, { merge: true });
-    // Reload businessSettings
-    const bizDoc = await db.collection('settings').doc(storeAdminId).get();
-    businessSettings = bizDoc.data();
-    tempLogoURL = null;
-    loadWelcome();
-    settingsMsg.innerText = 'Settings saved!';
-    setTimeout(() => { settingsMsg.innerText = ''; }, 3000);
+    try {
+      const updateData = { name, phone, address };
+      if (tempLogoURL) updateData.logoURL = tempLogoURL;
+      // Use currentUser.uid (the admin's UID) as document ID
+      await db.collection('settings').doc(currentUser.uid).set(updateData, { merge: true });
+      // Reload businessSettings
+      const bizDoc = await db.collection('settings').doc(currentUser.uid).get();
+      businessSettings = bizDoc.data();
+      tempLogoURL = null;
+      loadWelcome();
+      settingsMsg.innerText = 'Settings saved successfully!';
+      setTimeout(() => { settingsMsg.innerText = ''; }, 3000);
+    } catch (err) {
+      settingsMsg.innerText = 'Save failed: ' + err.message;
+      console.error(err);
+    }
   };
+  // ===========================================
 
   // Invite cashier
   inviteBtn.onclick = async () => {
