@@ -2,7 +2,7 @@
   "name": "ShopLedger",
   "short_name": "ShopLedger",
   "description": "POS, inventory & bookkeeping for small stores. Works offline.",
-  "start_url": "/landing.html",
+  "start_url": "/index.html",
   "display": "standalone",
   "orientation": "portrait",
   "theme_color": "#ff7e9e",
