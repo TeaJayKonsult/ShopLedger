@@ -71,8 +71,7 @@
   let userRole = null;
   let businessSettings = null;
   let storeAdminId = null;
-  
-  // Helper functions
+
   function formatMoney(amount) {
     return '₦' + Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
@@ -83,7 +82,7 @@
   function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
   window.showModal = showModal; window.closeModal = closeModal;
 
-  // Business setup form
+  // Business setup
   async function showBusinessSetup() {
     const root = document.getElementById('appRoot');
     root.innerHTML = `
@@ -133,7 +132,7 @@
         const updateData = { name, phone, address };
         if (tempLogoURL) updateData.logoURL = tempLogoURL;
         await db.collection('settings').doc(storeAdminId).set(updateData, { merge: true });
-        window.location.reload(); // Reload to show dashboard
+        window.location.reload();
       } catch(err) {
         document.getElementById('setupError').innerText = 'Save failed: ' + err.message;
       }
@@ -142,10 +141,7 @@
 
   // Main dashboard
   async function showAdminDashboard() {
-    // Ensure storeAdminId is set
-    if (!storeAdminId) storeAdminId = currentUser.uid;
-    
-    // Render full dashboard HTML
+    storeAdminId = storeAdminId || currentUser.uid;
     const root = document.getElementById('appRoot');
     root.innerHTML = `
       <div class="container">
@@ -212,34 +208,57 @@
         <footer>© 2026 TeaJay Konsult Ltd.</footer>
       </div>
 
-      <!-- Modals -->
-      <div id="addCategoryModal" class="modal"><div class="modal-content"><h3>Add Category</h3><input type="text" id="catName" class="input-field"><button id="saveCategoryBtn" class="btn btn-primary">Save</button><button onclick="closeModal('addCategoryModal')" class="btn btn-outline">Cancel</button></div></div>
-      <div id="addProductModal" class="modal"><div class="modal-content"><h3>Add Product</h3><input type="text" id="prodName" placeholder="Name" class="input-field"><select id="prodCategory" class="input-field"></select><input type="number" id="prodCost" placeholder="Cost price" class="input-field"><input type="number" id="prodPrice" placeholder="Selling price" class="input-field"><input type="number" id="prodStock" placeholder="Initial stock" class="input-field"><input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field"><button id="saveProductBtn" class="btn btn-primary">Save</button><button onclick="closeModal('addProductModal')" class="btn btn-outline">Cancel</button></div></div>
-      <div id="addExpenseModal" class="modal"><div class="modal-content"><h3>Add Expense</h3><input type="text" id="expenseName" placeholder="Title" class="input-field"><input type="number" id="expenseAmount" placeholder="Amount" class="input-field"><input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field"><button id="saveExpenseBtn" class="btn btn-primary">Save</button><button onclick="closeModal('addExpenseModal')" class="btn btn-outline">Cancel</button></div></div>
-      <div id="receiptModal" class="modal"><div class="modal-content"><h3>Receipt</h3><div id="receiptPreview" class="receipt-preview"></div><div class="flex"><button id="downloadPdfBtn" class="btn btn-primary">📄 Download PDF</button><button id="shareReceiptBtn" class="btn btn-outline">📤 Share WhatsApp</button></div><button onclick="closeModal('receiptModal')" class="btn btn-outline mt-2">Close</button></div></div>
+      <!-- Modals with inline onclick handlers -->
+      <div id="addCategoryModal" class="modal">
+        <div class="modal-content">
+          <h3>Add Category</h3>
+          <input type="text" id="catName" class="input-field" placeholder="Category name">
+          <button onclick="saveCategory()" class="btn btn-primary">Save</button>
+          <button onclick="closeModal('addCategoryModal')" class="btn btn-outline">Cancel</button>
+        </div>
+      </div>
+      <div id="addProductModal" class="modal">
+        <div class="modal-content">
+          <h3>Add Product</h3>
+          <input type="text" id="prodName" placeholder="Name" class="input-field">
+          <select id="prodCategory" class="input-field"></select>
+          <input type="number" id="prodCost" placeholder="Cost price" class="input-field">
+          <input type="number" id="prodPrice" placeholder="Selling price" class="input-field">
+          <input type="number" id="prodStock" placeholder="Initial stock" class="input-field">
+          <input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field">
+          <button onclick="saveProduct()" class="btn btn-primary">Save</button>
+          <button onclick="closeModal('addProductModal')" class="btn btn-outline">Cancel</button>
+        </div>
+      </div>
+      <div id="addExpenseModal" class="modal">
+        <div class="modal-content">
+          <h3>Add Expense</h3>
+          <input type="text" id="expenseName" placeholder="Title" class="input-field">
+          <input type="number" id="expenseAmount" placeholder="Amount" class="input-field">
+          <input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field">
+          <button onclick="saveExpense()" class="btn btn-primary">Save</button>
+          <button onclick="closeModal('addExpenseModal')" class="btn btn-outline">Cancel</button>
+        </div>
+      </div>
+      <div id="receiptModal" class="modal">
+        <div class="modal-content">
+          <h3>Receipt</h3>
+          <div id="receiptPreview" class="receipt-preview"></div>
+          <div class="flex">
+            <button id="downloadPdfBtn" class="btn btn-primary">📄 Download PDF</button>
+            <button id="shareReceiptBtn" class="btn btn-outline">📤 Share WhatsApp</button>
+          </div>
+          <button onclick="closeModal('receiptModal')" class="btn btn-outline mt-2">Close</button>
+        </div>
+      </div>
     `;
 
-    // Global variables for data
+    // Global data
     let categories = [], products = [], cart = [], lowStockItems = [];
     let salesChart, monthlySummaryChart, expenseChart;
 
-    // Helper to refresh all data
-    async function refreshAll() {
-      await loadCategoriesAndProducts();
-      renderCategories();
-      renderProducts();
-      renderProductListPos();
-      renderLowStock();
-      updateDashboard();
-      renderExpenses();
-      renderCart();
-      renderCashiers();
-      updateCategoryDropdown();
-      loadReports();
-      loadSettingsIntoForm();
-    }
-
-    async function loadCategoriesAndProducts() {
+    // Helper functions
+    async function loadCatalog() {
       const catsSnap = await db.collection('categories').where('storeId', '==', storeAdminId).get();
       categories = catsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       const prodsSnap = await db.collection('products').where('storeId', '==', storeAdminId).get();
@@ -251,17 +270,16 @@
       const container = document.getElementById('categoriesList');
       if (!container) return;
       if (!categories.length) { container.innerHTML = '<div>No categories</div>'; return; }
-      container.innerHTML = categories.map(c => `<div class="category-item"><span>${c.name}</span><button onclick="deleteCategoryFirestore('${c.id}')" class="icon-btn">🗑️</button></div>`).join('');
+      container.innerHTML = categories.map(c => `<div class="category-item"><span>${c.name}</span><button onclick="deleteCategory('${c.id}')" class="icon-btn">🗑️</button></div>`).join('');
     }
     function renderProducts() {
       const container = document.getElementById('productsList');
       if (!container) return;
       if (!products.length) { container.innerHTML = '<div>No products</div>'; return; }
-      container.innerHTML = products.map(p => `<div class="product-item"><div><strong>${p.name}</strong><br>${p.category} | Stock: ${p.stock} | ₦${p.price}</div><button onclick="deleteProductFirestore('${p.id}')" class="icon-btn">🗑️</button></div>`).join('');
+      container.innerHTML = products.map(p => `<div class="product-item"><div><strong>${p.name}</strong><br>${p.category} | Stock: ${p.stock} | ₦${p.price}</div><button onclick="deleteProduct('${p.id}')" class="icon-btn">🗑️</button></div>`).join('');
     }
     function renderProductListPos() {
       const container = document.getElementById('productListPos');
-      if (!container) return;
       const term = document.getElementById('searchProduct')?.value.toLowerCase() || '';
       const filtered = products.filter(p => p.name.toLowerCase().includes(term));
       container.innerHTML = filtered.map(p => `<div class="product-item" onclick="addToCart('${p.id}')"><div><strong>${p.name}</strong><br>₦${p.price} | Stock: ${p.stock}</div><button class="icon-btn">➕</button></div>`).join('');
@@ -287,7 +305,7 @@
       const container = document.getElementById('expensesList');
       if (!container) return;
       if (snap.empty) { container.innerHTML = '<div>No expenses</div>'; return; }
-      container.innerHTML = snap.docs.map(d => `<div class="product-item"><div><strong>${d.data().title}</strong><br>₦${d.data().amount} ${d.data().note ? `- ${d.data().note}` : ''}</div><button onclick="deleteExpenseFirestore('${d.id}')" class="icon-btn">🗑️</button></div>`).join('');
+      container.innerHTML = snap.docs.map(d => `<div class="product-item"><div><strong>${d.data().title}</strong><br>₦${d.data().amount} ${d.data().note ? `- ${d.data().note}` : ''}</div><button onclick="deleteExpense('${d.id}')" class="icon-btn">🗑️</button></div>`).join('');
     }
     async function renderCashiers() {
       if (userRole !== 'admin') return;
@@ -304,29 +322,35 @@
         categories.forEach(cat => { select.innerHTML += `<option value="${cat.name}">${cat.name}</option>`; });
       }
     }
+    async function refreshAll() {
+      await loadCatalog();
+      renderCategories();
+      renderProducts();
+      renderProductListPos();
+      renderLowStock();
+      updateDashboard();
+      renderExpenses();
+      renderCart();
+      renderCashiers();
+      updateCategoryDropdown();
+      loadReports();
+      loadSettingsIntoForm();
+    }
 
-    // CRUD operations
-    window.deleteCategoryFirestore = async (id) => {
-      await db.collection('categories').doc(id).delete();
-      await refreshAll();
-    };
-    window.deleteProductFirestore = async (id) => {
-      await db.collection('products').doc(id).delete();
-      await refreshAll();
-    };
-    window.deleteExpenseFirestore = async (id) => {
-      await db.collection('expenses').doc(id).delete();
-      await refreshAll();
-    };
-    document.getElementById('saveCategoryBtn')?.addEventListener('click', async () => {
+    // CRUD operations (global for onclick)
+    window.saveCategory = async () => {
       const name = document.getElementById('catName').value.trim();
       if (!name) return;
       await db.collection('categories').add({ storeId: storeAdminId, name });
       closeModal('addCategoryModal');
       document.getElementById('catName').value = '';
       await refreshAll();
-    });
-    document.getElementById('saveProductBtn')?.addEventListener('click', async () => {
+    };
+    window.deleteCategory = async (id) => {
+      await db.collection('categories').doc(id).delete();
+      await refreshAll();
+    };
+    window.saveProduct = async () => {
       const name = document.getElementById('prodName').value.trim();
       const category = document.getElementById('prodCategory').value;
       const cost = parseFloat(document.getElementById('prodCost').value);
@@ -337,9 +361,17 @@
       await db.collection('products').add({ storeId: storeAdminId, name, category, cost, price, stock, reorderLevel: reorder });
       closeModal('addProductModal');
       document.getElementById('prodName').value = '';
+      document.getElementById('prodCost').value = '';
+      document.getElementById('prodPrice').value = '';
+      document.getElementById('prodStock').value = '';
+      document.getElementById('prodReorder').value = '10';
       await refreshAll();
-    });
-    document.getElementById('saveExpenseBtn')?.addEventListener('click', async () => {
+    };
+    window.deleteProduct = async (id) => {
+      await db.collection('products').doc(id).delete();
+      await refreshAll();
+    };
+    window.saveExpense = async () => {
       const title = document.getElementById('expenseName').value.trim();
       const amount = parseFloat(document.getElementById('expenseAmount').value);
       const note = document.getElementById('expenseNote').value;
@@ -350,18 +382,21 @@
       document.getElementById('expenseAmount').value = '';
       document.getElementById('expenseNote').value = '';
       await refreshAll();
-    });
+    };
+    window.deleteExpense = async (id) => {
+      await db.collection('expenses').doc(id).delete();
+      await refreshAll();
+    };
 
     // POS cart
-    function addToCart(productId) {
+    window.addToCart = (productId) => {
       const product = products.find(p => p.id === productId);
       if (!product || product.stock <= 0) return alert("Out of stock");
       const existing = cart.find(i => i.id === productId);
       if (existing) existing.qty++;
       else cart.push({ id: productId, name: product.name, price: product.price, qty: 1 });
       renderCart();
-    }
-    window.addToCart = addToCart;
+    };
     window.removeFromCart = (idx) => { cart.splice(idx,1); renderCart(); };
     function renderCart() {
       const container = document.getElementById('cartItems');
@@ -456,12 +491,11 @@
     document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadReceipt);
     document.getElementById('shareReceiptBtn')?.addEventListener('click', shareReceiptWhatsApp);
 
-    // Reports (simplified, can be extended)
+    // Reports (placeholder)
     async function loadReports() {
-      // Placeholder for reports - you can add same as before but to avoid length, we'll implement later
-      // For now, just a simple message
-      const topProductsDiv = document.getElementById('topProductsList');
-      if (topProductsDiv) topProductsDiv.innerHTML = '<div class="small-text">Reports will load here.</div>';
+      // You can implement full reports later
+      const topDiv = document.getElementById('topProductsList');
+      if (topDiv) topDiv.innerHTML = '<div class="small-text">Reports will appear here.</div>';
     }
 
     // Settings
@@ -506,26 +540,28 @@
         const bizDoc = await db.collection('settings').doc(storeAdminId).get();
         businessSettings = bizDoc.data();
         tempLogoURL = null;
-        loadWelcome();
+        const welcomeDiv = document.getElementById('welcomeSection');
+        if (welcomeDiv && businessSettings.name) {
+          welcomeDiv.innerHTML = `<img src="${businessSettings.logoURL || ''}" class="logo-preview" onerror="this.style.display='none'"><div><strong>Welcome, ${businessSettings.name}</strong><br>${formatDateTime()}</div>`;
+        }
         const msgDiv = document.getElementById('settingsMsg');
         if (msgDiv) msgDiv.innerText = 'Settings saved!';
         setTimeout(() => { if (msgDiv) msgDiv.innerText = ''; }, 3000);
       } catch(err) { alert('Save failed: ' + err.message); }
     });
 
-    // Invite
+    // Staff invite
     document.getElementById('inviteBtn')?.addEventListener('click', async () => {
       const email = document.getElementById('inviteEmail')?.value.trim();
       if (!email) { inviteMsg.innerText = 'Enter email address'; return; }
       await db.collection('invitations').add({ email, role: 'cashier', storeAdminId, used: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
       const msgDiv = document.getElementById('inviteMsg');
       if (msgDiv) msgDiv.innerText = `Invitation sent to ${email}`;
-      const inputField = document.getElementById('inviteEmail');
-      if (inputField) inputField.value = '';
+      document.getElementById('inviteEmail').value = '';
       setTimeout(() => { if (msgDiv) msgDiv.innerText = ''; }, 3000);
     });
 
-    // Load welcome section
+    // Welcome section
     async function loadWelcome() {
       const welcomeDiv = document.getElementById('welcomeSection');
       if (welcomeDiv) {
@@ -554,18 +590,15 @@
         if (tab === 'settings') loadSettingsIntoForm();
       });
     });
-
     document.getElementById('searchProduct')?.addEventListener('input', () => renderProductListPos());
 
-    // Initial refresh
     await refreshAll();
     await loadWelcome();
     setInterval(updateDashboard, 10000);
   }
 
-  // Initialization
+  // Initialize
   (async () => {
-    // Add install button and iOS banner
     function setupInstallButton() {
       if (document.getElementById('installBtn')) return;
       const style = document.createElement('style');
