@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ShopLedger Debug</title>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+  <style>
+    body { font-family: monospace; padding: 20px; max-width: 600px; margin: 0 auto; }
+    .card { border: 1px solid #ccc; padding: 16px; margin-bottom: 20px; border-radius: 12px; }
+    input, button { padding: 8px; margin: 4px; width: 100%; }
+    .error { color: red; white-space: pre-wrap; }
+    .success { color: green; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Firestore Debug Tool</h2>
+    <div id="authStatus">Loading...</div>
+    <button id="logoutBtn" style="display:none">Logout</button>
+  </div>
+
+  <div class="card">
+    <h3>Add Category</h3>
+    <input type="text" id="catName" placeholder="Category name">
+    <button id="addCat">Add Category</button>
+    <div id="catResult"></div>
+  </div>
+
+  <div class="card">
+    <h3>Add Product</h3>
+    <input type="text" id="prodName" placeholder="Product name">
+    <select id="prodCategory"></select>
+    <input type="number" id="prodCost" placeholder="Cost price">
+    <input type="number" id="prodPrice" placeholder="Selling price">
+    <input type="number" id="prodStock" placeholder="Stock">
+    <button id="addProd">Add Product</button>
+    <div id="prodResult"></div>
+  </div>
+
+  <div class="card">
+    <h3>Raw Firestore Rules Test</h3>
+    <button id="testWrite">Test Write (settings collection)</button>
+    <div id="testResult"></div>
+  </div>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAEV8gjcAv4wTcMwzS9ddm-ooPC8dhBj8Y",
+      authDomain: "shopledger-6e10c.firebaseapp.com",
+      projectId: "shopledger-6e10c",
+      storageBucket: "shopledger-6e10c.firebasestorage.app",
+      messagingSenderId: "693117040596",
+      appId: "1:693117040596:web:799e63124085d9a91c0841"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser = null;
+
+    function updateAuthStatus(user) {
+      const statusDiv = document.getElementById('authStatus');
+      if (user) {
+        statusDiv.innerHTML = `✅ Logged in as: ${user.email} (UID: ${user.uid})`;
+        document.getElementById('logoutBtn').style.display = 'inline-block';
+      } else {
+        statusDiv.innerHTML = '❌ Not logged in. Redirecting to login...';
+        setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+      }
+    }
+
+    auth.onAuthStateChanged((user) => {
+      currentUser = user;
+      updateAuthStatus(user);
+      if (user) loadCategoriesForDropdown();
+    });
+
+    async function loadCategoriesForDropdown() {
+      if (!currentUser) return;
+      const snapshot = await db.collection('categories').where('storeId', '==', currentUser.uid).get();
+      const select = document.getElementById('prodCategory');
+      select.innerHTML = '<option value="">Select category</option>';
+      snapshot.forEach(doc => {
+        select.innerHTML += `<option value="${doc.data().name}">${doc.data().name}</option>`;
+      });
+    }
+
+    document.getElementById('addCat').onclick = async () => {
+      const name = document.getElementById('catName').value.trim();
+      if (!name) { document.getElementById('catResult').innerHTML = '<span class="error">Enter category name</span>'; return; }
+      try {
+        const docRef = await db.collection('categories').add({ storeId: currentUser.uid, name });
+        document.getElementById('catResult').innerHTML = `<span class="success">Category added with ID: ${docRef.id}</span>`;
+        document.getElementById('catName').value = '';
+        loadCategoriesForDropdown();
+      } catch (err) {
+        document.getElementById('catResult').innerHTML = `<span class="error">Error: ${err.message}</span>`;
+      }
+    };
+
+    document.getElementById('addProd').onclick = async () => {
+      const name = document.getElementById('prodName').value.trim();
+      const category = document.getElementById('prodCategory').value;
+      const cost = parseFloat(document.getElementById('prodCost').value);
+      const price = parseFloat(document.getElementById('prodPrice').value);
+      const stock = parseInt(document.getElementById('prodStock').value);
+      if (!name || !category || isNaN(cost) || isNaN(price)) {
+        document.getElementById('prodResult').innerHTML = '<span class="error">Fill all fields</span>';
+        return;
+      }
+      try {
+        await db.collection('products').add({ storeId: currentUser.uid, name, category, cost, price, stock });
+        document.getElementById('prodResult').innerHTML = '<span class="success">Product added!</span>';
+        document.getElementById('prodName').value = '';
+        document.getElementById('prodCost').value = '';
+        document.getElementById('prodPrice').value = '';
+        document.getElementById('prodStock').value = '';
+      } catch (err) {
+        document.getElementById('prodResult').innerHTML = `<span class="error">Error: ${err.message}</span>`;
+      }
+    };
+
+    document.getElementById('testWrite').onclick = async () => {
+      try {
+        await db.collection('settings').doc(currentUser.uid).set({ test: true, timestamp: Date.now() });
+        document.getElementById('testResult').innerHTML = '<span class="success">Write to settings succeeded!</span>';
+      } catch (err) {
+        document.getElementById('testResult').innerHTML = `<span class="error">Write failed: ${err.message}</span>`;
+      }
+    };
+
+    document.getElementById('logoutBtn').onclick = async () => {
+      await auth.signOut();
+      window.location.href = 'index.html';
+    };
+  </script>
+</body>
+</html>
