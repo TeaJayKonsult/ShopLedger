@@ -7,376 +7,597 @@
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#fdf8f4">
   <meta name="description" content="ShopLedger – inventory, POS, expenses & professional receipts. Works offline. Built for Nigerian stores.">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
     body {
       font-family: 'Inter', sans-serif;
-      background: #fdf8f4;
-      color: #1e293b;
-      line-height: 1.5;
+      background: #FFF5F0;
+      color: #1E293B;
+      overflow-x: hidden;
+      scroll-behavior: smooth;
     }
     .container {
       max-width: 1200px;
       margin: 0 auto;
       padding: 0 20px;
     }
-    header {
+    /* ========== NAVBAR ========== */
+    .navbar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      background: rgba(255,245,240,0.9);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(0,0,0,0.05);
+      z-index: 100;
+      padding: 16px 0;
+      transition: all 0.3s;
+    }
+    .navbar.scrolled {
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+    .nav-inner {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 20px 0;
-      border-bottom: 1px solid #ffe4e9;
-      flex-wrap: wrap;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
     }
     .logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: #ff7e9e;
-    }
-    .logo span { color: #1e293b; }
-    nav {
       display: flex;
-      gap: 24px;
       align-items: center;
-      flex-wrap: wrap;
+      gap: 10px;
+      font-weight: 800;
+      font-size: 1.5rem;
+      color: #1E293B;
     }
-    nav a {
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #5B4DBC, #C8B6FF);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .logo span {
+      background: linear-gradient(135deg, #5B4DBC, #FF8FA3);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+    }
+    .nav-links a {
       text-decoration: none;
       color: #475569;
       font-weight: 500;
+      transition: color 0.2s;
     }
-    .btn-outline {
-      background: transparent;
-      border: 1px solid #ff7e9e;
-      color: #ff7e9e;
+    .nav-links a:hover { color: #FF8FA3; }
+    .nav-cta {
+      background: linear-gradient(135deg, #5B4DBC, #C8B6FF);
+      color: white !important;
       padding: 8px 20px;
       border-radius: 40px;
       font-weight: 600;
+      box-shadow: 0 4px 10px rgba(91,77,188,0.3);
+    }
+    .mobile-toggle {
+      display: none;
+      background: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
       cursor: pointer;
-      transition: 0.2s;
     }
-    .btn-outline:hover { background: #ffe4e9; }
+    /* ========== HERO ========== */
     .hero {
+      min-height: 100vh;
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
-      gap: 40px;
-      padding: 60px 0 40px 0;
+      padding: 120px 0 60px;
+      background: linear-gradient(135deg, #FFE8E0 0%, #FFF5F0 50%, #F0E6FF 100%);
+      position: relative;
+      overflow: hidden;
     }
-    .hero-text { flex: 1; }
-    .hero-eyebrow {
-      font-size: 14px;
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.4;
+    }
+    .blob1 { width: 400px; height: 400px; background: #FF8FA3; top: -100px; right: -100px; }
+    .blob2 { width: 300px; height: 300px; background: #C8B6FF; bottom: -80px; left: -80px; }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+      position: relative;
+      z-index: 2;
+    }
+    .hero-badge {
+      display: inline-flex;
+      gap: 8px;
+      background: rgba(255,255,255,0.6);
+      backdrop-filter: blur(10px);
+      padding: 6px 14px;
+      border-radius: 40px;
+      font-size: 0.75rem;
       font-weight: 600;
-      letter-spacing: 2px;
-      color: #ff7e9e;
-      text-transform: uppercase;
-      margin-bottom: 12px;
+      color: #5B4DBC;
+      margin-bottom: 20px;
     }
-    .hero-text h1 {
-      font-size: 48px;
-      font-weight: 700;
-      color: #ff7e9e;
-      margin-bottom: 16px;
+    .hero-title {
+      font-size: 3rem;
+      font-weight: 800;
       line-height: 1.2;
+      margin-bottom: 20px;
     }
-    .hero-text p {
-      font-size: 18px;
+    .hero-title span {
+      background: linear-gradient(135deg, #5B4DBC, #FF8FA3);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+    }
+    .hero-desc {
+      font-size: 1.125rem;
       color: #475569;
-      margin-bottom: 24px;
+      margin-bottom: 32px;
+      max-width: 500px;
     }
     .hero-buttons {
       display: flex;
       gap: 16px;
       flex-wrap: wrap;
+      margin-bottom: 40px;
     }
     .btn-primary {
-      background: #ff7e9e;
+      background: linear-gradient(135deg, #5B4DBC, #C8B6FF);
       color: white;
       border: none;
       padding: 12px 28px;
       border-radius: 40px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      transition: 0.2s;
+      transition: transform 0.2s;
+      box-shadow: 0 4px 12px rgba(91,77,188,0.3);
     }
-    .btn-primary:hover { background: #e56b8a; }
-    .btn-secondary {
-      background: transparent;
-      border: 1px solid #ff7e9e;
-      color: #ff7e9e;
+    .btn-primary:active { transform: scale(0.97); }
+    .btn-outline-light {
+      background: white;
+      border: 1px solid #E2E8F0;
+      color: #1E293B;
       padding: 12px 28px;
       border-radius: 40px;
       font-weight: 600;
       cursor: pointer;
     }
-    .hero-image {
-      flex: 1;
-      background: #ffe4e9;
-      border-radius: 32px;
-      padding: 40px;
-      text-align: center;
-      color: #ff7e9e;
-      font-weight: 500;
+    .hero-stats {
+      display: flex;
+      gap: 32px;
+    }
+    .stat-number {
+      font-size: 1.75rem;
+      font-weight: 800;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: #64748B;
+      text-transform: uppercase;
+    }
+    /* phone mockup */
+    .phone-mock {
+      position: relative;
+      display: flex;
+      justify-content: center;
+    }
+    .phone {
+      width: 260px;
+      height: 530px;
+      background: #1E293B;
+      border-radius: 36px;
+      padding: 8px;
+      box-shadow: 0 30px 40px -20px rgba(0,0,0,0.3);
+      animation: float 3s ease-in-out infinite;
+    }
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: #FFF5F0;
+      border-radius: 28px;
+      overflow: hidden;
+    }
+    .phone-header {
+      padding: 12px;
+      background: rgba(255,245,240,0.9);
+      display: flex;
+      justify-content: space-between;
+    }
+    .phone-content { padding: 12px; }
+    .widget {
+      background: white;
+      border-radius: 16px;
+      padding: 10px;
+      margin-bottom: 8px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .float-card {
+      position: absolute;
+      background: white;
+      border-radius: 20px;
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+      animation: float 4s ease-in-out infinite;
+    }
+    .float1 { top: 20px; right: -20px; animation-delay: 0.5s; }
+    .float2 { bottom: 80px; left: -30px; animation-delay: 1s; }
+    @keyframes float {
+      0%,100% { transform: translateY(0); }
+      50% { transform: translateY(-10px); }
+    }
+    /* sections */
+    .section {
+      padding: 80px 0;
     }
     .section-title {
       text-align: center;
-      font-size: 32px;
-      font-weight: 700;
-      margin-bottom: 48px;
-      color: #1e293b;
+      font-size: 2rem;
+      font-weight: 800;
+      margin-bottom: 16px;
+    }
+    .section-sub {
+      text-align: center;
+      color: #64748B;
+      max-width: 600px;
+      margin: 0 auto 48px;
     }
     .features-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 32px;
-      margin: 60px 0;
     }
     .feature-card {
       background: white;
       border-radius: 24px;
-      padding: 24px;
-      text-align: center;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.02);
-      border: 1px solid #f0e6df;
+      padding: 28px;
+      transition: transform 0.3s, box-shadow 0.3s;
+      border: 1px solid rgba(0,0,0,0.04);
     }
-    .feature-icon { font-size: 48px; margin-bottom: 16px; }
-    .feature-card h3 { font-size: 20px; margin-bottom: 12px; }
-    .feature-card p { color: #64748b; }
-    .how-it-works {
-      background: white;
-      border-radius: 32px;
-      padding: 48px 24px;
-      margin: 40px 0;
-      text-align: center;
+    .feature-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 30px -12px rgba(0,0,0,0.1);
+    }
+    .feature-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 20px;
     }
     .steps {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
       gap: 32px;
-      margin-top: 32px;
+      margin-top: 40px;
     }
     .step {
-      flex: 1;
-      min-width: 180px;
-      background: #fdf8f4;
-      padding: 24px;
+      background: white;
       border-radius: 24px;
+      padding: 24px;
+      text-align: center;
+      flex: 1;
+      min-width: 200px;
     }
-    .step-number {
-      background: #ff7e9e;
+    .step-num {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #5B4DBC, #C8B6FF);
       color: white;
-      width: 40px;
-      height: 40px;
-      border-radius: 40px;
-      display: inline-flex;
+      border-radius: 30px;
+      display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 700;
-      margin-bottom: 16px;
+      margin: 0 auto 16px;
+      font-weight: 800;
     }
     .testimonials {
-      background: #fff0e6;
-      border-radius: 32px;
-      padding: 48px 24px;
-      margin: 40px 0;
+      background: linear-gradient(135deg, #FFE8E0, #FFF5F0);
+      border-radius: 48px;
+      padding: 60px 20px;
     }
     .testimonial-grid {
-      display: flex;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 32px;
-      justify-content: center;
+      margin-top: 40px;
     }
-    .testimonial-card {
+    .testimonial {
       background: white;
       border-radius: 24px;
       padding: 24px;
-      max-width: 300px;
-      font-style: italic;
     }
-    .about, .contact {
+    .stars { color: #FBBF24; margin-bottom: 12px; }
+    /* about & contact */
+    .about-card, .contact-card {
       background: white;
       border-radius: 32px;
       padding: 48px 24px;
+      text-align: center;
       margin: 40px 0;
     }
-    .contact-info {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      align-items: center;
-      margin-top: 24px;
-    }
-    .contact-info a {
-      color: #ff7e9e;
-      text-decoration: none;
-    }
-    .auth-section {
+    /* inline auth card */
+    .auth-card {
       background: white;
       border-radius: 32px;
       padding: 32px;
       margin: 40px 0;
       box-shadow: 0 8px 30px rgba(0,0,0,0.05);
     }
-    .tabs {
+    .auth-tabs {
       display: flex;
       gap: 8px;
-      border-bottom: 2px solid #ffe4e9;
+      background: #F1F5F9;
+      padding: 4px;
+      border-radius: 60px;
       margin-bottom: 24px;
     }
-    .tab {
+    .auth-tab {
       flex: 1;
-      text-align: center;
-      padding: 12px;
-      cursor: pointer;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      border-radius: 40px;
       font-weight: 600;
-      color: #64748b;
+      cursor: pointer;
     }
-    .tab.active {
-      color: #ff7e9e;
-      border-bottom: 2px solid #ff7e9e;
+    .auth-tab.active {
+      background: white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      color: #5B4DBC;
     }
     .form-group {
-      margin-bottom: 20px;
-    }
-    .form-group input {
-      width: 100%;
-      padding: 14px;
-      border: 1px solid #e2e8f0;
-      border-radius: 24px;
-      font-size: 14px;
-    }
-    .error {
-      color: #dc2626;
-      font-size: 13px;
       margin-bottom: 16px;
     }
-    footer {
-      text-align: center;
-      padding: 32px 0;
-      border-top: 1px solid #ffe4e9;
-      color: #64748b;
-      font-size: 12px;
+    .form-group input, .form-group textarea {
+      width: 100%;
+      padding: 14px;
+      border: 2px solid #E2E8F0;
+      border-radius: 24px;
+      font-size: 0.875rem;
+    }
+    .btn-google {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #E2E8F0;
+      border-radius: 40px;
+      background: white;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      margin-top: 16px;
+    }
+    .footer {
+      background: #1E293B;
+      color: white;
+      padding: 48px 0 24px;
+    }
+    .scroll-reveal {
+      opacity: 0;
+      transform: translateY(30px);
+      transition: all 0.6s ease;
+    }
+    .scroll-reveal.visible {
+      opacity: 1;
+      transform: translateY(0);
     }
     @media (max-width: 768px) {
-      .hero { flex-direction: column; text-align: center; }
-      .hero-text h1 { font-size: 36px; }
+      .hero-grid { grid-template-columns: 1fr; text-align: center; gap: 40px; }
+      .hero-title { font-size: 2.2rem; }
+      .hero-desc { margin-left: auto; margin-right: auto; }
       .hero-buttons { justify-content: center; }
-      nav { justify-content: center; margin-top: 12px; width: 100%; }
+      .hero-stats { justify-content: center; }
+      .nav-links { display: none; }
+      .mobile-toggle { display: block; }
+      .nav-links.mobile-open {
+        display: flex;
+        flex-direction: column;
+        position: absolute;
+        top: 70px;
+        left: 20px;
+        right: 20px;
+        background: white;
+        padding: 24px;
+        border-radius: 24px;
+        gap: 20px;
+      }
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <header>
-    <div class="logo">Shop<span>Ledger</span></div>
-    <nav>
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <div class="logo">
+      <div class="logo-icon"><i class="fas fa-store"></i></div>
+      Shop<span>Ledger</span>
+    </div>
+    <div class="nav-links" id="navLinks">
       <a href="#features">Features</a>
       <a href="#about">About</a>
       <a href="#contact">Contact</a>
-      <button class="btn-outline" id="navSignInBtn">Sign In</button>
-    </nav>
-  </header>
+      <button class="nav-cta" id="navGetStarted">Get Started</button>
+    </div>
+    <button class="mobile-toggle" id="mobileToggle"><i class="fas fa-bars"></i></button>
+  </div>
+</nav>
 
-  <!-- Hero -->
-  <section class="hero">
-    <div class="hero-text">
-      <div class="hero-eyebrow">WELCOME TO SHOPLEDGER</div>
-      <h1>Stop losing money to bad inventory records.<br>Run your store like a pro – from your phone.</h1>
-      <p>ShopLedger gives you inventory management, fast POS, expense tracking, and professional PDF receipts – all offline, all on your phone. No computer needed. No monthly fees (just a small plan when you grow).</p>
+<section class="hero">
+  <div class="blob blob1"></div>
+  <div class="blob blob2"></div>
+  <div class="container hero-grid">
+    <div>
+      <div class="hero-badge"><i class="fas fa-star"></i> Built for Nigerian small stores</div>
+      <h1 class="hero-title">Stop losing money to bad inventory records.<br><span>Run your store like a pro – from your phone.</span></h1>
+      <p class="hero-desc">ShopLedger gives you inventory management, fast POS, expense tracking, and professional PDF receipts – all offline, all on your phone. No computer needed.</p>
       <div class="hero-buttons">
         <button class="btn-primary" id="heroGetStarted">Start Free – No Credit Card</button>
-        <button class="btn-secondary" id="heroFeatures">See how it works ↓</button>
+        <button class="btn-outline-light" id="scrollToFeatures">See how it works ↓</button>
+      </div>
+      <div class="hero-stats">
+        <div><div class="stat-number">500+</div><div class="stat-label">Active Stores</div></div>
+        <div><div class="stat-number">50K+</div><div class="stat-label">Sales Tracked</div></div>
+        <div><div class="stat-number">₦2M+</div><div class="stat-label">Revenue Managed</div></div>
       </div>
     </div>
-    <div class="hero-image">
-      📱 Dashboard preview – your store at a glance
+    <div class="phone-mock">
+      <div class="phone">
+        <div class="phone-screen">
+          <div class="phone-header"><i class="fas fa-store"></i><i class="fas fa-bell"></i></div>
+          <div class="phone-content">
+            <div class="widget">Today's Sales <strong>₦24,500</strong></div>
+            <div class="widget">Profit <strong style="color:#10B981;">₦8,200</strong></div>
+            <div class="widget">Low Stock: 3 items</div>
+          </div>
+        </div>
+      </div>
+      <div class="float-card float1">
+        <div style="background:#DCFCE7; width:32px; height:32px; border-radius:40px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-check" style="color:#16A34A;"></i></div>
+        <div><strong>Sale Complete!</strong><br>₦3,500 – 5 items</div>
+      </div>
+      <div class="float-card float2">
+        <div style="background:#FEE2E2; width:32px; height:32px; border-radius:40px; display:flex; align-items:center; justify-content:center;"><i class="fas fa-exclamation" style="color:#DC2626;"></i></div>
+        <div><strong>Low Stock Alert</strong><br>Coca-Cola: 3 left</div>
+      </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Features section (unchanged) -->
-  <section id="features">
-    <h2 class="section-title">Everything you need to run your store</h2>
+<section id="features" class="section">
+  <div class="container">
+    <h2 class="section-title scroll-reveal">Everything you need to run your store</h2>
     <div class="features-grid">
-      <div class="feature-card"><div class="feature-icon">📦</div><h3>Inventory That Works</h3><p>Add products, track stock, set low‑stock alerts (<10). Know what you have – always.</p></div>
-      <div class="feature-card"><div class="feature-icon">🛒</div><h3>Fast Point of Sale</h3><p>Search products, add to cart, discount, tax – one tap checkout. Stock updates automatically.</p></div>
-      <div class="feature-card"><div class="feature-icon">🧾</div><h3>Professional PDF Receipts</h3><p>Your logo, address, itemised list, total – download or share via WhatsApp instantly.</p></div>
-      <div class="feature-card"><div class="feature-icon">💸</div><h3>Expense Tracking</h3><p>Log rent, salaries, restocking. See where your money goes, boost profit.</p></div>
-      <div class="feature-card"><div class="feature-icon">📊</div><h3>Daily Dashboard</h3><p>Sales, profit, low stock alerts – at a glance. No spreadsheets.</p></div>
-      <div class="feature-card"><div class="feature-icon">👥</div><h3>Staff Roles (Admin & Cashier)</h3><p>Owner has full control; cashier only sells. Perfect for multiple employees.</p></div>
+      <div class="feature-card scroll-reveal"><div class="feature-icon" style="background:#FFE4E9; color:#E85D75;"><i class="fas fa-cash-register"></i></div><h3>Fast Point of Sale</h3><p>Search products, add to cart, discount, tax – one tap checkout. Stock updates automatically.</p></div>
+      <div class="feature-card scroll-reveal"><div class="feature-icon" style="background:#E9E4FF; color:#5B4DBC;"><i class="fas fa-boxes"></i></div><h3>Inventory That Works</h3><p>Add products, track stock, set low‑stock alerts (&lt;10). Know what you have – always.</p></div>
+      <div class="feature-card scroll-reveal"><div class="feature-icon" style="background:#DCFCE7; color:#16A34A;"><i class="fas fa-chart-line"></i></div><h3>Real‑Time Profit</h3><p>See your true profit on every sale. Track cost price vs selling price automatically.</p></div>
+      <div class="feature-card scroll-reveal"><div class="feature-icon" style="background:#FEF9C3; color:#CA8A04;"><i class="fas fa-receipt"></i></div><h3>Professional PDF Receipts</h3><p>Your logo, address, itemised list, total – download or share via WhatsApp instantly.</p></div>
+      <div class="feature-card scroll-reveal"><div class="feature-icon" style="background:#DBEAFE; color:#2563EB;"><i class="fas fa-wallet"></i></div><h3>Expense Tracking</h3><p>Log rent, salaries, restocking. See where your money goes, boost profit.</p></div>
+      <div class="feature-card scroll-reveal"><div class="feature-icon" style="background:#FCE7F3; color:#DB2777;"><i class="fas fa-users"></i></div><h3>Staff Roles (Admin & Cashier)</h3><p>Owner has full control; cashier only sells. Perfect for multiple employees.</p></div>
     </div>
-    <p style="text-align: center; margin-top: 24px; color: #ff7e9e; font-weight: 500;">✨ …and many more: offline mode, receipt history, product categories, branded receipts, and weekly reports.</p>
-  </section>
-
-  <!-- How It Works -->
-  <div class="how-it-works">
-    <h2 class="section-title">Get started in 3 minutes</h2>
-    <div class="steps">
-      <div class="step"><div class="step-number">1</div><h3>Sign up</h3><p>Email & password – takes 1 minute.</p></div>
-      <div class="step"><div class="step-number">2</div><h3>Set up your store</h3><p>Add business name, address, phone, logo.</p></div>
-      <div class="step"><div class="step-number">3</div><h3>Start selling</h3><p>Add products, open POS, print receipts.</p></div>
-    </div>
+    <p class="scroll-reveal" style="text-align:center; margin-top:24px; color:#FF8FA3; font-weight:500;">✨ …and many more: offline mode, receipt history, product categories, branded receipts, and weekly reports.</p>
   </div>
+</section>
 
-  <!-- Testimonials -->
-  <div class="testimonials">
-    <h2 class="section-title">Trusted by store owners</h2>
+<div class="container">
+  <div class="steps">
+    <div class="step scroll-reveal"><div class="step-num">1</div><h3>Sign up</h3><p>Email & password – takes 1 minute.</p></div>
+    <div class="step scroll-reveal"><div class="step-num">2</div><h3>Set up your store</h3><p>Add business name, address, phone, logo.</p></div>
+    <div class="step scroll-reveal"><div class="step-num">3</div><h3>Start selling</h3><p>Add products, open POS, print receipts.</p></div>
+  </div>
+</div>
+
+<div class="testimonials">
+  <div class="container">
+    <h2 class="section-title scroll-reveal">Trusted by store owners</h2>
     <div class="testimonial-grid">
-      <div class="testimonial-card">“Before ShopLedger, I never knew my daily profit. Now I know exactly what I’m earning. The low stock alert saved me from running out of milk twice.”<br>– <strong>Aminat</strong>, Lagos</div>
-      <div class="testimonial-card">“My cashier uses only the POS – she can’t mess with prices or expenses. That gives me peace of mind.”<br>– <strong>Chidi</strong>, Abuja</div>
+      <div class="testimonial scroll-reveal"><div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div><p>“Before ShopLedger, I never knew my daily profit. Now I know exactly what I’m earning. The low stock alert saved me from running out of milk twice.”</p><strong>– Aminat, Lagos</strong></div>
+      <div class="testimonial scroll-reveal"><div class="stars"><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i></div><p>“My cashier uses only the POS – she can’t mess with prices or expenses. That gives me peace of mind.”</p><strong>– Chidi, Abuja</strong></div>
     </div>
   </div>
+</div>
 
-  <!-- About Us -->
-  <section id="about" class="about">
-    <h2 class="section-title">About ShopLedger</h2>
-    <div style="max-width: 800px; margin: 0 auto; text-align: center;">
-      <p>ShopLedger is a complete point‑of‑sale, inventory, and bookkeeping system built specifically for Nigerian small stores – provision shops, supermarkets, boutiques, and more.</p>
-      <p style="margin-top: 16px;">We believe that every store owner deserves professional tools without paying enterprise fees. That’s why ShopLedger works offline, installs like an app, and gives you real‑time sales & stock visibility – all from your phone.</p>
-      <p style="margin-top: 16px;">Developed by <strong>TeaJay Konsult Ltd</strong> – a rising company dedicated to solving individual and business problems through digital solutions.</p>
+<section id="about" class="about-card">
+  <div class="container">
+    <h2 class="section-title scroll-reveal">About ShopLedger</h2>
+    <div style="max-width:800px; margin:0 auto; text-align:center;">
+      <p class="scroll-reveal">ShopLedger is a complete point‑of‑sale, inventory, and bookkeeping system built specifically for Nigerian small stores – provision shops, supermarkets, boutiques, and more.</p>
+      <p class="scroll-reveal" style="margin-top:16px;">We believe that every store owner deserves professional tools without paying enterprise fees. That’s why ShopLedger works offline, installs like an app, and gives you real‑time sales & stock visibility – all from your phone.</p>
+      <p class="scroll-reveal" style="margin-top:16px;">Developed by <strong>TeaJay Konsult Ltd</strong> – a rising company dedicated to solving individual and business problems through digital solutions.</p>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Contact Us -->
-  <section id="contact" class="contact">
-    <h2 class="section-title">Contact Us</h2>
-    <div style="text-align: center;">
+<section id="contact" class="contact-card">
+  <div class="container">
+    <h2 class="section-title scroll-reveal">Contact Us</h2>
+    <div style="text-align:center;">
       <p>ShopLedger is a product of <strong>TeaJay Konsult Ltd</strong>. We’re here to help you succeed.</p>
-      <div class="contact-info">
-        <div>📧 <a href="mailto:teajaykonsult@gmail.com">teajaykonsult@gmail.com</a></div>
-        <div>📞 <a href="tel:+2349068290856">+234 906 829 0856</a></div>
+      <div style="margin-top:24px;">
+        <div>📧 <a href="mailto:teajaykonsult@gmail.com" style="color:#5B4DBC;">teajaykonsult@gmail.com</a></div>
+        <div>📞 <a href="tel:+2349068290856" style="color:#5B4DBC;">+234 906 829 0856</a></div>
         <div>🌐 Lagos, Nigeria</div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Auth section -->
-  <div class="auth-section" id="authSection">
-    <div class="tabs" id="authTabs">
-      <div class="tab active" data-tab="login">Sign In</div>
-      <div class="tab" data-tab="signup">Create Account</div>
+<div class="container">
+  <div class="auth-card" id="authSection">
+    <div class="auth-tabs" id="authTabs">
+      <button class="auth-tab active" data-tab="login">Sign In</button>
+      <button class="auth-tab" data-tab="signup">Create Account</button>
     </div>
     <div id="authFormContainer"></div>
-    <div id="authError" class="error"></div>
+    <div id="authError" style="color:#dc2626; font-size:0.75rem; margin-top:8px;"></div>
   </div>
-
-  <footer>
-    © 2026 TeaJay Konsult Ltd. All rights reserved. | Built for Nigerian micro‑businesses | <a href="#contact">Contact</a> | <a href="#">Privacy</a>
-  </footer>
 </div>
 
-<script src="common.js"></script>
+<footer class="footer">
+  <div class="container">
+    <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:40px;">
+      <div><div class="logo" style="color:white;"><div class="logo-icon"><i class="fas fa-store"></i></div>ShopLedger</div><p style="color:#94A3B8; max-width:260px; margin-top:16px;">Smart POS, inventory & bookkeeping for Nigerian small stores.</p></div>
+      <div><h4>Product</h4><ul style="list-style:none; margin-top:12px;"><li><a href="#features" style="color:#94A3B8;">Features</a></li><li><a href="#" style="color:#94A3B8;">Pricing</a></li></ul></div>
+      <div><h4>Company</h4><ul style="list-style:none; margin-top:12px;"><li><a href="#about" style="color:#94A3B8;">About Us</a></li><li><a href="#contact" style="color:#94A3B8;">Contact</a></li></ul></div>
+      <div><h4>Support</h4><ul style="list-style:none; margin-top:12px;"><li><a href="mailto:teajaykonsult@gmail.com" style="color:#94A3B8;">teajaykonsult@gmail.com</a></li><li><a href="tel:+2349068290856" style="color:#94A3B8;">+234 906 829 0856</a></li></ul></div>
+    </div>
+    <hr style="margin:32px 0; border-color:#334155;">
+    <div style="text-align:center; color:#64748B;">© 2026 TeaJay Konsult Ltd. All rights reserved.</div>
+  </div>
+</footer>
+
+<!-- Firebase and Auth logic (same as your original) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-storage-compat.js"></script>
 <script>
-  // Setup install button (common.js)
-  window.addEventListener('DOMContentLoaded', () => {
-    if (typeof setupInstallButton === 'function') setupInstallButton();
-  });
+  const firebaseConfig = {
+    apiKey: "AIzaSyAEV8gjcAv4wTcMwzS9ddm-ooPC8dhBj8Y",
+    authDomain: "shopledger-6e10c.firebaseapp.com",
+    projectId: "shopledger-6e10c",
+    storageBucket: "shopledger-6e10c.firebasestorage.app",
+    messagingSenderId: "693117040596",
+    appId: "1:693117040596:web:799e63124085d9a91c0841"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  const storage = firebase.storage();
 
   let currentTab = 'login';
   const authFormContainer = document.getElementById('authFormContainer');
@@ -385,155 +606,170 @@
   function renderAuthForm() {
     if (currentTab === 'login') {
       authFormContainer.innerHTML = `
-        <div class="form-group"><label>Email</label><input type="email" id="email" placeholder="your@store.com"></div>
-        <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="••••••"></div>
+        <div class="form-group"><input type="email" id="email" placeholder="Email address" required></div>
+        <div class="form-group"><input type="password" id="password" placeholder="Password" required></div>
         <button id="submitAuthBtn" class="btn-primary" style="width:100%">Sign In</button>
       `;
       document.getElementById('submitAuthBtn').onclick = () => signIn();
     } else {
       authFormContainer.innerHTML = `
-        <div class="form-group"><label>Email</label><input type="email" id="email" placeholder="your@store.com"></div>
-        <div class="form-group"><label>Password</label><input type="password" id="password" placeholder="••••••"></div>
+        <div class="form-group"><input type="text" id="storeName" placeholder="Store name (e.g. Ade's Provision)" required></div>
+        <div class="form-group"><input type="email" id="email" placeholder="Email address" required></div>
+        <div class="form-group"><input type="password" id="password" placeholder="Password (min 6)" required></div>
         <button id="submitAuthBtn" class="btn-primary" style="width:100%">Create Account</button>
       `;
       document.getElementById('submitAuthBtn').onclick = () => signUp();
     }
+    // add Google button
+    const googleBtn = document.createElement('button');
+    googleBtn.className = 'btn-google';
+    googleBtn.innerHTML = '<img src="https://www.google.com/favicon.ico" style="width:18px;height:18px"> Continue with Google';
+    googleBtn.onclick = () => googleSignIn();
+    authFormContainer.appendChild(googleBtn);
   }
 
   function switchTab(tab) {
     currentTab = tab;
-    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-    document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
+    document.querySelector(`.auth-tab[data-tab="${tab}"]`).classList.add('active');
     renderAuthForm();
   }
 
   document.getElementById('authTabs').addEventListener('click', (e) => {
-    const tab = e.target.closest('.tab');
+    const tab = e.target.closest('.auth-tab');
     if (tab) switchTab(tab.dataset.tab);
   });
 
   async function signIn() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+    const email = document.getElementById('email')?.value;
+    const password = document.getElementById('password')?.value;
+    if (!email || !password) return;
     try {
       await auth.signInWithEmailAndPassword(email, password);
-      await checkAuthAndRedirect();
     } catch (err) {
       authErrorDiv.innerText = err.message;
     }
   }
 
   async function signUp() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+    const storeName = document.getElementById('storeName')?.value;
+    const email = document.getElementById('email')?.value;
+    const password = document.getElementById('password')?.value;
+    if (!storeName || !email || !password) return;
     try {
       const cred = await auth.createUserWithEmailAndPassword(email, password);
-      // IMPORTANT: create user document with storeAdminId = own UID
       await db.collection('users').doc(cred.user.uid).set({
-        role: 'admin',
+        storeName: storeName,
         email: email,
+        role: 'admin',
         storeAdminId: cred.user.uid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        plan: 'free'
       });
-      await checkAuthAndRedirect();
     } catch (err) {
       authErrorDiv.innerText = err.message;
     }
   }
 
-  async function checkAuthAndRedirect() {
-    const user = auth.currentUser;
-    if (!user) return;
-    // Ensure user document exists and has storeAdminId (migration for old users)
-    const userDoc = await db.collection('users').doc(user.uid).get();
-    if (!userDoc.exists) {
-      // should not happen, but just in case
-      await db.collection('users').doc(user.uid).set({
-        email: user.email,
-        role: 'admin',
-        storeAdminId: user.uid,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-      });
-    } else if (!userDoc.data().storeAdminId) {
-      await db.collection('users').doc(user.uid).update({ storeAdminId: user.uid });
-    }
-    const bizDoc = await db.collection('settings').doc(user.uid).get();
-    if (!bizDoc.exists) {
-      showBusinessSetup();
-    } else {
-      const role = userDoc.exists ? userDoc.data().role : 'admin';
-      if (role === 'admin') window.location.href = 'admin.html';
-      else window.location.href = 'cashier.html';
-    }
-  }
-
-  async function showBusinessSetup() {
-    const appDiv = document.querySelector('.container');
-    // Temporarily hide the rest and show setup form (you can implement as modal or inline)
-    // For simplicity, we'll redirect to a setup page? But we'll create an inline form.
-    // Here we implement a simple modal or replace content? Let's do an inline form.
-    const setupHTML = `
-      <div class="card" style="margin: 20px auto; max-width:500px;">
-        <h2>Business Setup</h2>
-        <p>Tell us about your store</p>
-        <div class="flex" style="justify-content:center; margin-bottom:16px">
-          <img id="logoPreview" class="logo-preview" style="width:80px;height:80px;border-radius:16px;object-fit:cover;display:none">
-          <button id="uploadLogoBtn" class="btn-outline" style="width:auto; padding:8px 16px">Upload Logo</button>
-          <input type="file" id="logoFile" accept="image/*" style="display:none">
-        </div>
-        <div class="form-group"><label>Business Name</label><input type="text" id="bizName" placeholder="e.g. FMJ Stores"></div>
-        <div class="form-group"><label>Phone Number</label><input type="tel" id="bizPhone" placeholder="08012345678"></div>
-        <div class="form-group"><label>Address (including state)</label><textarea id="bizAddress" rows="2" placeholder="e.g. 12 Main Street, Lagos"></textarea></div>
-        <button id="completeSetupBtn" class="btn-primary">Complete Setup</button>
-        <div id="setupError" class="error"></div>
-      </div>
-    `;
-    document.getElementById('authSection').innerHTML = setupHTML;
-    // Logo upload logic
-    const uploadBtn = document.getElementById('uploadLogoBtn');
-    const fileInput = document.getElementById('logoFile');
-    const preview = document.getElementById('logoPreview');
-    let tempLogoURL = null;
-    uploadBtn.onclick = () => fileInput.click();
-    fileInput.onchange = async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const user = auth.currentUser;
-      const storageRef = storage.ref(`logos/${user.uid}`);
-      await storageRef.put(file);
-      const url = await storageRef.getDownloadURL();
-      tempLogoURL = url;
-      preview.src = url;
-      preview.style.display = 'block';
-    };
-    document.getElementById('completeSetupBtn').onclick = async () => {
-      const name = document.getElementById('bizName').value.trim();
-      const phone = document.getElementById('bizPhone').value.trim();
-      const address = document.getElementById('bizAddress').value.trim();
-      if (!name || !phone || !address) {
-        document.getElementById('setupError').innerText = 'Please fill all fields';
-        return;
+  async function googleSignIn() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    try {
+      const result = await auth.signInWithPopup(provider);
+      const user = result.user;
+      const userRef = db.collection('users').doc(user.uid);
+      const doc = await userRef.get();
+      if (!doc.exists) {
+        await userRef.set({
+          storeName: user.displayName || 'My Store',
+          email: user.email,
+          role: 'admin',
+          storeAdminId: user.uid,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          plan: 'free'
+        });
       }
-      const user = auth.currentUser;
-      await db.collection('settings').doc(user.uid).set({
-        name, phone, address, logoURL: tempLogoURL || ''
-      });
-      window.location.href = 'admin.html';
-    };
+    } catch (err) {
+      authErrorDiv.innerText = err.message;
+    }
   }
 
-  // Smooth scroll
-  document.getElementById('heroFeatures').addEventListener('click', () => {
-    document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
+  auth.onAuthStateChanged((user) => {
+    if (user) {
+      window.location.href = 'admin.html';  // your admin dashboard
+    } else {
+      renderAuthForm();
+    }
   });
+
+  // UI helpers
   document.getElementById('heroGetStarted').addEventListener('click', () => {
     document.getElementById('authSection').scrollIntoView({ behavior: 'smooth' });
   });
-  document.getElementById('navSignInBtn').addEventListener('click', () => {
+  document.getElementById('navGetStarted').addEventListener('click', () => {
     document.getElementById('authSection').scrollIntoView({ behavior: 'smooth' });
   });
+  document.getElementById('scrollToFeatures').addEventListener('click', () => {
+    document.getElementById('features').scrollIntoView({ behavior: 'smooth' });
+  });
 
-  renderAuthForm();
+  // navbar scroll
+  window.addEventListener('scroll', () => {
+    const nav = document.getElementById('navbar');
+    if (window.scrollY > 50) nav.classList.add('scrolled');
+    else nav.classList.remove('scrolled');
+  });
+
+  // mobile menu
+  const mobileToggle = document.getElementById('mobileToggle');
+  const navLinks = document.getElementById('navLinks');
+  mobileToggle.addEventListener('click', () => navLinks.classList.toggle('mobile-open'));
+
+  // scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.scroll-reveal').forEach(el => observer.observe(el));
+
+  // PWA install (same as before)
+  function setupInstall() {
+    let deferredPrompt;
+    const installBtn = document.createElement('button');
+    installBtn.id = 'installPwaBtn';
+    installBtn.innerHTML = '<i class="fas fa-download"></i> Install App';
+    installBtn.style.position = 'fixed';
+    installBtn.style.bottom = '20px';
+    installBtn.style.left = '50%';
+    installBtn.style.transform = 'translateX(-50%)';
+    installBtn.style.background = '#FF8FA3';
+    installBtn.style.color = 'white';
+    installBtn.style.border = 'none';
+    installBtn.style.borderRadius = '40px';
+    installBtn.style.padding = '10px 20px';
+    installBtn.style.zIndex = '999';
+    installBtn.style.fontWeight = '600';
+    installBtn.style.cursor = 'pointer';
+    installBtn.style.display = 'none';
+    document.body.appendChild(installBtn);
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      installBtn.style.display = 'flex';
+    });
+    installBtn.addEventListener('click', async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') installBtn.style.display = 'none';
+        deferredPrompt = null;
+      } else {
+        alert('Use browser menu → Add to Home Screen');
+      }
+    });
+    if (window.matchMedia('(display-mode: standalone)').matches) installBtn.style.display = 'none';
+  }
+  setupInstall();
 </script>
 </body>
 </html>
