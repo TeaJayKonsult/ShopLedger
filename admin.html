@@ -70,7 +70,6 @@
   let currentUser = null;
   let businessSettings = null;
 
-  // Helper functions
   function formatMoney(amount) {
     return '₦' + Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
@@ -155,9 +154,29 @@
 
         <div id="dashboardTab" class="tab-pane active">
           <div id="welcomeSection" class="welcome-section"></div>
-          <div class="card"><div class="card-title">Today's Summary</div><div class="stat-grid"><div class="stat-card"><div class="stat-value" id="todaySales">₦0</div><div class="stat-label">Sales</div></div><div class="stat-card"><div class="stat-value" id="todayProfit">₦0</div><div class="stat-label">Profit</div></div></div></div>
-          <div class="card"><div class="card-title">Low Stock (<10)</div><div id="lowStockList"></div></div>
-          <div class="card"><div class="card-title">Quick Actions</div><div class="flex"><button onclick="showModal('addProductModal')" class="btn-primary">➕ Add Product</button><button onclick="showModal('addCategoryModal')" class="btn-outline">📁 Add Category</button></div></div>
+          <div class="card">
+            <div class="card-title">Today's Summary</div>
+            <div class="stat-grid">
+              <div class="stat-card"><div class="stat-value" id="todaySales">₦0</div><div class="stat-label">Sales</div></div>
+              <div class="stat-card"><div class="stat-value" id="todayProfit">₦0</div><div class="stat-label">Profit</div></div>
+            </div>
+          </div>
+          <!-- NEW: Yesterday's Summary Card -->
+          <div class="card">
+            <div class="card-title">Yesterday's Summary</div>
+            <div class="stat-grid">
+              <div class="stat-card"><div class="stat-value" id="yesterdaySales">₦0</div><div class="stat-label">Sales</div></div>
+              <div class="stat-card"><div class="stat-value" id="yesterdayProfit">₦0</div><div class="stat-label">Profit</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Low Stock (<10)</div>
+            <div id="lowStockList"></div>
+          </div>
+          <div class="card">
+            <div class="card-title">Quick Actions</div>
+            <div class="flex"><button onclick="showModal('addProductModal')" class="btn-primary">➕ Add Product</button><button onclick="showModal('addCategoryModal')" class="btn-outline">📁 Add Category</button></div>
+          </div>
         </div>
 
         <div id="inventoryTab" class="tab-pane">
@@ -255,7 +274,6 @@
     let categories = [], products = [], cart = [], lowStockItems = [];
     let salesChart, monthlySummaryChart, expenseChart;
 
-    // Helper to refresh all data
     async function refreshAll() {
       await loadCategoriesAndProducts();
       renderCategories();
@@ -304,16 +322,37 @@
       if (!lowStockItems.length) { container.innerHTML = '✅ All stocks above reorder level'; return; }
       container.innerHTML = lowStockItems.map(p => `<div class="alert-badge mb-1">⚠️ ${p.name} (${p.stock} left)</div>`).join('');
     }
+    
+    // UPDATED: fetch today + yesterday summaries
     async function updateDashboard() {
       const today = new Date().toISOString().slice(0,10);
-      const salesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', today).get();
-      let totalSales = 0, totalProfit = 0;
-      salesSnap.forEach(d => { totalSales += d.data().amount; totalProfit += d.data().profit; });
-      const salesSpan = document.getElementById('todaySales');
-      const profitSpan = document.getElementById('todayProfit');
-      if (salesSpan) salesSpan.innerText = formatMoney(totalSales);
-      if (profitSpan) profitSpan.innerText = formatMoney(totalProfit);
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterday = yesterdayDate.toISOString().slice(0,10);
+
+      const todaySnap = await db.collection('sales')
+        .where('storeId', '==', currentUser.uid)
+        .where('date', '==', today).get();
+      let todaySales = 0, todayProfit = 0;
+      todaySnap.forEach(d => { todaySales += d.data().amount; todayProfit += d.data().profit; });
+
+      const yesterdaySnap = await db.collection('sales')
+        .where('storeId', '==', currentUser.uid)
+        .where('date', '==', yesterday).get();
+      let yesterdaySales = 0, yesterdayProfit = 0;
+      yesterdaySnap.forEach(d => { yesterdaySales += d.data().amount; yesterdayProfit += d.data().profit; });
+
+      const todaySalesSpan = document.getElementById('todaySales');
+      const todayProfitSpan = document.getElementById('todayProfit');
+      if (todaySalesSpan) todaySalesSpan.innerText = formatMoney(todaySales);
+      if (todayProfitSpan) todayProfitSpan.innerText = formatMoney(todayProfit);
+
+      const yesterdaySalesSpan = document.getElementById('yesterdaySales');
+      const yesterdayProfitSpan = document.getElementById('yesterdayProfit');
+      if (yesterdaySalesSpan) yesterdaySalesSpan.innerText = formatMoney(yesterdaySales);
+      if (yesterdayProfitSpan) yesterdayProfitSpan.innerText = formatMoney(yesterdayProfit);
     }
+    
     async function renderExpenses() {
       const snap = await db.collection('expenses').where('storeId', '==', currentUser.uid).orderBy('timestamp', 'desc').get();
       const container = document.getElementById('expensesList');
@@ -336,7 +375,6 @@
       }
     }
 
-    // CRUD operations (global for onclick)
     window.saveCategory = async () => {
       const name = document.getElementById('catName').value.trim();
       if (!name) return;
@@ -386,7 +424,6 @@
       await refreshAll();
     };
 
-    // POS cart
     window.addToCart = (productId) => {
       const product = products.find(p => p.id === productId);
       if (!product || product.stock <= 0) return alert("Out of stock");
@@ -489,7 +526,6 @@
     document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadReceipt);
     document.getElementById('shareReceiptBtn')?.addEventListener('click', shareReceiptWhatsApp);
 
-    // Reports
     async function loadReports() {
       const ownerId = currentUser.uid;
       const today = new Date();
@@ -593,7 +629,6 @@
       URL.revokeObjectURL(link.href);
     }
 
-    // Settings
     function loadSettingsIntoForm() {
       if (businessSettings) {
         document.getElementById('settingsBizName').value = businessSettings.name || '';
@@ -641,7 +676,6 @@
       } catch(err) { alert('Save failed: ' + err.message); }
     });
 
-    // Staff invite
     document.getElementById('inviteBtn')?.addEventListener('click', async () => {
       const email = document.getElementById('inviteEmail').value.trim();
       if (!email) { document.getElementById('inviteMsg').innerText = 'Enter email address'; return; }
@@ -651,7 +685,6 @@
       setTimeout(() => { document.getElementById('inviteMsg').innerText = ''; }, 3000);
     });
 
-    // Welcome
     async function loadWelcome() {
       const welcomeDiv = document.getElementById('welcomeSection');
       if (welcomeDiv) {
@@ -663,7 +696,6 @@
       }
     }
 
-    // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -688,7 +720,6 @@
 
   // ==================== INITIALIZATION ====================
   (async () => {
-    // Install button and iOS banner
     function setupInstallButton() {
       if (document.getElementById('installBtn')) return;
       const style = document.createElement('style');
@@ -732,7 +763,6 @@
     });
     if (!user) { window.location.href = 'index.html'; return; }
     currentUser = user;
-    // Ensure user document exists
     const userDoc = await db.collection('users').doc(user.uid).get();
     if (!userDoc.exists) {
       await db.collection('users').doc(user.uid).set({ email: user.email, role: 'admin', storeAdminId: user.uid });
