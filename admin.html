@@ -79,7 +79,6 @@
   function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
   window.showModal = showModal; window.closeModal = closeModal;
 
-  // Business Setup (unchanged)
   async function showBusinessSetup() {
     const root = document.getElementById('appRoot');
     root.innerHTML = `
@@ -235,7 +234,6 @@
       lowStockItems = products.filter(p => p.stock <= (p.reorderLevel || 10));
     }
 
-    // FIXED DELETE FUNCTIONS using direct event listeners after innerHTML injection
     function renderCategories() {
       const container = document.getElementById('categoriesList');
       if (!container) return;
@@ -247,7 +245,7 @@
         </div>
       `).join('');
       document.querySelectorAll('.delete-category').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-id');
           if (confirm('Delete this category?')) {
             await db.collection('categories').doc(id).delete();
@@ -268,7 +266,7 @@
         </div>
       `).join('');
       document.querySelectorAll('.delete-product').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
+        btn.addEventListener('click', async () => {
           const id = btn.getAttribute('data-id');
           if (confirm('Delete this product?')) {
             await db.collection('products').doc(id).delete();
@@ -285,12 +283,14 @@
       const filtered = products.filter(p => p.name.toLowerCase().includes(term));
       container.innerHTML = filtered.map(p => `<div class="product-item" onclick="addToCart('${p.id}')"><div><strong>${p.name}</strong><br>₦${p.price} | Stock: ${p.stock}</div><button class="icon-btn">➕</button></div>`).join('');
     }
+
     function renderLowStock() {
       const container = document.getElementById('lowStockList');
       if (!container) return;
       if (!lowStockItems.length) { container.innerHTML = '✅ All stocks above reorder level'; return; }
       container.innerHTML = lowStockItems.map(p => `<div class="alert-badge mb-1">⚠️ ${p.name} (${p.stock} left)</div>`).join('');
     }
+
     async function updateDashboard() {
       const today = new Date().toISOString().slice(0,10);
       const salesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', today).get();
@@ -299,13 +299,29 @@
       document.getElementById('todaySales').innerText = formatMoney(totalSales);
       document.getElementById('todayProfit').innerText = formatMoney(totalProfit);
     }
+
     async function renderExpenses() {
       const snap = await db.collection('expenses').where('storeId', '==', currentUser.uid).orderBy('timestamp', 'desc').get();
       const container = document.getElementById('expensesList');
       if (!container) return;
       if (snap.empty) { container.innerHTML = '<div>No expenses</div>'; return; }
-      container.innerHTML = snap.docs.map(d => `<div class="product-item"><div><strong>${d.data().title}</strong><br>₦${d.data().amount} ${d.data().note ? `- ${d.data().note}` : ''}</div><button onclick="deleteExpense('${d.id}')" class="icon-btn">🗑️</button></div>`).join('');
+      container.innerHTML = snap.docs.map(d => `
+        <div class="product-item" data-id="${d.id}">
+          <div><strong>${d.data().title}</strong><br>₦${d.data().amount} ${d.data().note ? `- ${d.data().note}` : ''}</div>
+          <button class="icon-btn delete-expense" data-id="${d.id}">🗑️</button>
+        </div>
+      `).join('');
+      document.querySelectorAll('.delete-expense').forEach(btn => {
+        btn.addEventListener('click', async () => {
+          const id = btn.getAttribute('data-id');
+          if (confirm('Delete this expense?')) {
+            await db.collection('expenses').doc(id).delete();
+            await refreshAll();
+          }
+        });
+      });
     }
+
     async function renderCashiers() {
       const usersSnap = await db.collection('users').where('storeAdminId', '==', currentUser.uid).where('role', '==', 'cashier').get();
       const container = document.getElementById('cashiersList');
@@ -313,6 +329,7 @@
       if (usersSnap.empty) { container.innerHTML = '<div>No cashiers added yet.</div>'; return; }
       container.innerHTML = usersSnap.docs.map(d => `<div class="product-item"><div><strong>${d.data().email}</strong><br>Role: Cashier</div></div>`).join('');
     }
+
     function updateCategoryDropdown() {
       const select = document.getElementById('prodCategory');
       if (select) {
@@ -321,6 +338,7 @@
       }
     }
 
+    // Save functions
     window.saveCategory = async () => {
       const name = document.getElementById('catName').value.trim();
       if (!name) return;
@@ -357,11 +375,8 @@
       document.getElementById('expenseNote').value = '';
       await refreshAll();
     };
-    window.deleteExpense = async (id) => {
-      await db.collection('expenses').doc(id).delete();
-      await refreshAll();
-    };
 
+    // POS cart
     window.addToCart = (productId) => {
       const product = products.find(p => p.id === productId);
       if (!product || product.stock <= 0) return alert("Out of stock");
@@ -541,6 +556,7 @@
       link.click();
       URL.revokeObjectURL(link.href);
     }
+
     function loadSettingsIntoForm() {
       if (businessSettings) {
         document.getElementById('settingsBizName').value = businessSettings.name || '';
@@ -587,14 +603,33 @@
         setTimeout(() => { if (msgDiv) msgDiv.innerText = ''; }, 3000);
       } catch(err) { alert('Save failed: ' + err.message); }
     });
-    document.getElementById('inviteBtn')?.addEventListener('click', async () => {
-      const email = document.getElementById('inviteEmail').value.trim();
-      if (!email) { document.getElementById('inviteMsg').innerText = 'Enter email address'; return; }
-      await db.collection('invitations').add({ email, role: 'cashier', storeAdminId: currentUser.uid, used: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-      document.getElementById('inviteMsg').innerText = `Invitation sent to ${email}`;
-      document.getElementById('inviteEmail').value = '';
-      setTimeout(() => { document.getElementById('inviteMsg').innerText = ''; }, 3000);
-    });
+
+    // Invite Cashier - fixed event listener
+    const inviteBtn = document.getElementById('inviteBtn');
+    if (inviteBtn) {
+      inviteBtn.addEventListener('click', async () => {
+        const email = document.getElementById('inviteEmail').value.trim();
+        if (!email) {
+          document.getElementById('inviteMsg').innerText = 'Enter email address';
+          return;
+        }
+        try {
+          await db.collection('invitations').add({
+            email: email,
+            role: 'cashier',
+            storeAdminId: currentUser.uid,
+            used: false,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          });
+          document.getElementById('inviteMsg').innerText = `Invitation sent to ${email}`;
+          document.getElementById('inviteEmail').value = '';
+          setTimeout(() => { document.getElementById('inviteMsg').innerText = ''; }, 3000);
+        } catch (err) {
+          document.getElementById('inviteMsg').innerText = 'Error: ' + err.message;
+        }
+      });
+    }
+
     async function loadWelcome() {
       const welcomeDiv = document.getElementById('welcomeSection');
       if (welcomeDiv) {
@@ -605,6 +640,7 @@
         }
       }
     }
+
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -621,6 +657,7 @@
       });
     });
     document.getElementById('searchProduct')?.addEventListener('input', () => renderProductListPos());
+
     await refreshAll();
     await loadWelcome();
     setInterval(updateDashboard, 10000);
