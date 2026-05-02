@@ -53,6 +53,7 @@
 <div id="appRoot"></div>
 
 <script>
+  // ==================== FIREBASE CONFIG ====================
   const firebaseConfig = {
     apiKey: "AIzaSyAEV8gjcAv4wTcMwzS9ddm-ooPC8dhBj8Y",
     authDomain: "shopledger-6e10c.firebaseapp.com",
@@ -69,6 +70,7 @@
   let currentUser = null;
   let businessSettings = null;
 
+  // Helper functions
   function formatMoney(amount) {
     return '₦' + Number(amount).toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
   }
@@ -79,16 +81,17 @@
   function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
   window.showModal = showModal; window.closeModal = closeModal;
 
+  // ==================== BUSINESS SETUP ====================
   async function showBusinessSetup() {
     const root = document.getElementById('appRoot');
     root.innerHTML = `
       <div class="container">
         <div class="card">
-          <h2>Business Setup Required</h2>
-          <p>Please enter your store details to continue.</p>
+          <h2 style="margin-bottom: 16px;">Business Setup Required</h2>
+          <p style="margin-bottom: 20px;">Please enter your store details to continue.</p>
           <div class="flex" style="justify-content:center; margin-bottom:16px">
             <img id="setupLogoPreview" class="logo-preview" style="display:none">
-            <button id="setupUploadLogoBtn" class="btn-outline">Upload Logo</button>
+            <button id="setupUploadLogoBtn" class="btn-outline" style="width:auto; padding:8px 16px">Upload Logo</button>
             <input type="file" id="setupLogoFile" accept="image/*" style="display:none">
           </div>
           <div><label>Business Name</label><input type="text" id="setupBizName" class="input-field" placeholder="Your store name"></div>
@@ -135,6 +138,7 @@
     };
   }
 
+  // ==================== MAIN ADMIN DASHBOARD ====================
   async function showAdminDashboard() {
     const root = document.getElementById('appRoot');
     root.innerHTML = `
@@ -152,7 +156,6 @@
         <div id="dashboardTab" class="tab-pane active">
           <div id="welcomeSection" class="welcome-section"></div>
           <div class="card"><div class="card-title">Today's Summary</div><div class="stat-grid"><div class="stat-card"><div class="stat-value" id="todaySales">₦0</div><div class="stat-label">Sales</div></div><div class="stat-card"><div class="stat-value" id="todayProfit">₦0</div><div class="stat-label">Profit</div></div></div></div>
-          <div class="card"><div class="card-title">Yesterday's Snapshot</div><div class="stat-grid"><div class="stat-card"><div class="stat-value" id="yesterdaySales">₦0</div><div class="stat-label">Sales</div></div><div class="stat-card"><div class="stat-value" id="yesterdayProfit">₦0</div><div class="stat-label">Profit</div></div></div></div>
           <div class="card"><div class="card-title">Low Stock (<10)</div><div id="lowStockList"></div></div>
           <div class="card"><div class="card-title">Quick Actions</div><div class="flex"><button onclick="showModal('addProductModal')" class="btn-primary">➕ Add Product</button><button onclick="showModal('addCategoryModal')" class="btn-outline">📁 Add Category</button></div></div>
         </div>
@@ -203,15 +206,56 @@
         <footer>© 2026 TeaJay Konsult Ltd.</footer>
       </div>
 
-      <div id="addCategoryModal" class="modal"><div class="modal-content"><h3>Add Category</h3><input type="text" id="catName" class="input-field" placeholder="Category name"><button onclick="saveCategory()" class="btn-primary">Save</button><button onclick="closeModal('addCategoryModal')" class="btn-outline">Cancel</button></div></div>
-      <div id="addProductModal" class="modal"><div class="modal-content"><h3>Add Product</h3><input type="text" id="prodName" placeholder="Name" class="input-field"><select id="prodCategory" class="input-field"></select><input type="number" id="prodCost" placeholder="Cost price" class="input-field"><input type="number" id="prodPrice" placeholder="Selling price" class="input-field"><input type="number" id="prodStock" placeholder="Initial stock" class="input-field"><input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field"><button onclick="saveProduct()" class="btn-primary">Save</button><button onclick="closeModal('addProductModal')" class="btn-outline">Cancel</button></div></div>
-      <div id="addExpenseModal" class="modal"><div class="modal-content"><h3>Add Expense</h3><input type="text" id="expenseName" placeholder="Title" class="input-field"><input type="number" id="expenseAmount" placeholder="Amount" class="input-field"><input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field"><button onclick="saveExpense()" class="btn-primary">Save</button><button onclick="closeModal('addExpenseModal')" class="btn-outline">Cancel</button></div></div>
-      <div id="receiptModal" class="modal"><div class="modal-content"><h3>Receipt</h3><div id="receiptPreview" class="receipt-preview"></div><div class="flex"><button id="downloadPdfBtn" class="btn-primary">📄 Download PDF</button><button id="shareReceiptBtn" class="btn-outline">📤 Share WhatsApp</button></div><button onclick="closeModal('receiptModal')" class="btn-outline mt-2">Close</button></div></div>
+      <!-- Modals -->
+      <div id="addCategoryModal" class="modal">
+        <div class="modal-content">
+          <h3>Add Category</h3>
+          <input type="text" id="catName" class="input-field" placeholder="Category name">
+          <button onclick="saveCategory()" class="btn-primary">Save</button>
+          <button onclick="closeModal('addCategoryModal')" class="btn-outline">Cancel</button>
+        </div>
+      </div>
+      <div id="addProductModal" class="modal">
+        <div class="modal-content">
+          <h3>Add Product</h3>
+          <input type="text" id="prodName" placeholder="Name" class="input-field">
+          <select id="prodCategory" class="input-field"></select>
+          <input type="number" id="prodCost" placeholder="Cost price" class="input-field">
+          <input type="number" id="prodPrice" placeholder="Selling price" class="input-field">
+          <input type="number" id="prodStock" placeholder="Initial stock" class="input-field">
+          <input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field">
+          <button onclick="saveProduct()" class="btn-primary">Save</button>
+          <button onclick="closeModal('addProductModal')" class="btn-outline">Cancel</button>
+        </div>
+      </div>
+      <div id="addExpenseModal" class="modal">
+        <div class="modal-content">
+          <h3>Add Expense</h3>
+          <input type="text" id="expenseName" placeholder="Title" class="input-field">
+          <input type="number" id="expenseAmount" placeholder="Amount" class="input-field">
+          <input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field">
+          <button onclick="saveExpense()" class="btn-primary">Save</button>
+          <button onclick="closeModal('addExpenseModal')" class="btn-outline">Cancel</button>
+        </div>
+      </div>
+      <div id="receiptModal" class="modal">
+        <div class="modal-content">
+          <h3>Receipt</h3>
+          <div id="receiptPreview" class="receipt-preview"></div>
+          <div class="flex">
+            <button id="downloadPdfBtn" class="btn-primary">📄 Download PDF</button>
+            <button id="shareReceiptBtn" class="btn-outline">📤 Share WhatsApp</button>
+          </div>
+          <button onclick="closeModal('receiptModal')" class="btn-outline mt-2">Close</button>
+        </div>
+      </div>
     `;
 
+    // Global data
     let categories = [], products = [], cart = [], lowStockItems = [];
     let salesChart, monthlySummaryChart, expenseChart;
 
+    // Helper to refresh all data
     async function refreshAll() {
       await loadCategoriesAndProducts();
       renderCategories();
@@ -239,44 +283,14 @@
       const container = document.getElementById('categoriesList');
       if (!container) return;
       if (!categories.length) { container.innerHTML = '<div>No categories</div>'; return; }
-      container.innerHTML = categories.map(c => `
-        <div class="category-item" data-id="${c.id}">
-          <span>${c.name}</span>
-          <button class="icon-btn delete-category" data-id="${c.id}">🗑️</button>
-        </div>
-      `).join('');
-      document.querySelectorAll('.delete-category').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.getAttribute('data-id');
-          if (confirm('Delete this category?')) {
-            await db.collection('categories').doc(id).delete();
-            await refreshAll();
-          }
-        });
-      });
+      container.innerHTML = categories.map(c => `<div class="category-item"><span>${c.name}</span><button onclick="deleteCategory('${c.id}')" class="icon-btn">🗑️</button></div>`).join('');
     }
-
     function renderProducts() {
       const container = document.getElementById('productsList');
       if (!container) return;
       if (!products.length) { container.innerHTML = '<div>No products</div>'; return; }
-      container.innerHTML = products.map(p => `
-        <div class="product-item" data-id="${p.id}">
-          <div><strong>${p.name}</strong><br>${p.category} | Stock: ${p.stock} | ₦${p.price}</div>
-          <button class="icon-btn delete-product" data-id="${p.id}">🗑️</button>
-        </div>
-      `).join('');
-      document.querySelectorAll('.delete-product').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.getAttribute('data-id');
-          if (confirm('Delete this product?')) {
-            await db.collection('products').doc(id).delete();
-            await refreshAll();
-          }
-        });
-      });
+      container.innerHTML = products.map(p => `<div class="product-item"><div><strong>${p.name}</strong><br>${p.category} | Stock: ${p.stock} | ₦${p.price}</div><button onclick="deleteProduct('${p.id}')" class="icon-btn">🗑️</button></div>`).join('');
     }
-
     function renderProductListPos() {
       const container = document.getElementById('productListPos');
       if (!container) return;
@@ -284,57 +298,29 @@
       const filtered = products.filter(p => p.name.toLowerCase().includes(term));
       container.innerHTML = filtered.map(p => `<div class="product-item" onclick="addToCart('${p.id}')"><div><strong>${p.name}</strong><br>₦${p.price} | Stock: ${p.stock}</div><button class="icon-btn">➕</button></div>`).join('');
     }
-
     function renderLowStock() {
       const container = document.getElementById('lowStockList');
       if (!container) return;
       if (!lowStockItems.length) { container.innerHTML = '✅ All stocks above reorder level'; return; }
       container.innerHTML = lowStockItems.map(p => `<div class="alert-badge mb-1">⚠️ ${p.name} (${p.stock} left)</div>`).join('');
     }
-
     async function updateDashboard() {
       const today = new Date().toISOString().slice(0,10);
-      const yesterdayDate = new Date();
-      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-      const yesterday = yesterdayDate.toISOString().slice(0,10);
-
-      // Today's sales & profit
-      const todaySalesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', today).get();
+      const salesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', today).get();
       let totalSales = 0, totalProfit = 0;
-      todaySalesSnap.forEach(d => { totalSales += d.data().amount; totalProfit += d.data().profit; });
-      document.getElementById('todaySales').innerText = formatMoney(totalSales);
-      document.getElementById('todayProfit').innerText = formatMoney(totalProfit);
-
-      // Yesterday's sales & profit
-      const yesterdaySalesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', yesterday).get();
-      let yesterdaySales = 0, yesterdayProfit = 0;
-      yesterdaySalesSnap.forEach(d => { yesterdaySales += d.data().amount; yesterdayProfit += d.data().profit; });
-      document.getElementById('yesterdaySales').innerText = formatMoney(yesterdaySales);
-      document.getElementById('yesterdayProfit').innerText = formatMoney(yesterdayProfit);
+      salesSnap.forEach(d => { totalSales += d.data().amount; totalProfit += d.data().profit; });
+      const salesSpan = document.getElementById('todaySales');
+      const profitSpan = document.getElementById('todayProfit');
+      if (salesSpan) salesSpan.innerText = formatMoney(totalSales);
+      if (profitSpan) profitSpan.innerText = formatMoney(totalProfit);
     }
-
     async function renderExpenses() {
       const snap = await db.collection('expenses').where('storeId', '==', currentUser.uid).orderBy('timestamp', 'desc').get();
       const container = document.getElementById('expensesList');
       if (!container) return;
       if (snap.empty) { container.innerHTML = '<div>No expenses</div>'; return; }
-      container.innerHTML = snap.docs.map(d => `
-        <div class="product-item" data-id="${d.id}">
-          <div><strong>${d.data().title}</strong><br>₦${d.data().amount} ${d.data().note ? `- ${d.data().note}` : ''}</div>
-          <button class="icon-btn delete-expense" data-id="${d.id}">🗑️</button>
-        </div>
-      `).join('');
-      document.querySelectorAll('.delete-expense').forEach(btn => {
-        btn.addEventListener('click', async () => {
-          const id = btn.getAttribute('data-id');
-          if (confirm('Delete this expense?')) {
-            await db.collection('expenses').doc(id).delete();
-            await refreshAll();
-          }
-        });
-      });
+      container.innerHTML = snap.docs.map(d => `<div class="product-item"><div><strong>${d.data().title}</strong><br>₦${d.data().amount} ${d.data().note ? `- ${d.data().note}` : ''}</div><button onclick="deleteExpense('${d.id}')" class="icon-btn">🗑️</button></div>`).join('');
     }
-
     async function renderCashiers() {
       const usersSnap = await db.collection('users').where('storeAdminId', '==', currentUser.uid).where('role', '==', 'cashier').get();
       const container = document.getElementById('cashiersList');
@@ -342,7 +328,6 @@
       if (usersSnap.empty) { container.innerHTML = '<div>No cashiers added yet.</div>'; return; }
       container.innerHTML = usersSnap.docs.map(d => `<div class="product-item"><div><strong>${d.data().email}</strong><br>Role: Cashier</div></div>`).join('');
     }
-
     function updateCategoryDropdown() {
       const select = document.getElementById('prodCategory');
       if (select) {
@@ -351,13 +336,17 @@
       }
     }
 
-    // Save functions
+    // CRUD operations (global for onclick)
     window.saveCategory = async () => {
       const name = document.getElementById('catName').value.trim();
       if (!name) return;
       await db.collection('categories').add({ storeId: currentUser.uid, name });
       closeModal('addCategoryModal');
       document.getElementById('catName').value = '';
+      await refreshAll();
+    };
+    window.deleteCategory = async (id) => {
+      await db.collection('categories').doc(id).delete();
       await refreshAll();
     };
     window.saveProduct = async () => {
@@ -376,6 +365,10 @@
       document.getElementById('prodStock').value = '';
       await refreshAll();
     };
+    window.deleteProduct = async (id) => {
+      await db.collection('products').doc(id).delete();
+      await refreshAll();
+    };
     window.saveExpense = async () => {
       const title = document.getElementById('expenseName').value.trim();
       const amount = parseFloat(document.getElementById('expenseAmount').value);
@@ -386,6 +379,10 @@
       document.getElementById('expenseName').value = '';
       document.getElementById('expenseAmount').value = '';
       document.getElementById('expenseNote').value = '';
+      await refreshAll();
+    };
+    window.deleteExpense = async (id) => {
+      await db.collection('expenses').doc(id).delete();
       await refreshAll();
     };
 
@@ -492,6 +489,7 @@
     document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadReceipt);
     document.getElementById('shareReceiptBtn')?.addEventListener('click', shareReceiptWhatsApp);
 
+    // Reports
     async function loadReports() {
       const ownerId = currentUser.uid;
       const today = new Date();
@@ -542,12 +540,37 @@
       if (tableDiv) {
         tableDiv.innerHTML = `<div class="report-item"><strong>Month</strong><strong>Sales (₦)</strong><strong>Expenses (₦)</strong><strong>Profit (₦)</strong></div>` + labels.map((l, i) => `<div class="report-item"><span>${l}</span><span>${formatMoney(salesData[i])}</span><span>${formatMoney(monthlyExpenses[i])}</span><span>${formatMoney(monthlyProfits[i])}</span></div>`).join('');
       }
+      const currentMonth = today.toISOString().slice(0,7);
+      const allSalesSnap = await db.collection('sales').where('storeId', '==', ownerId).get();
+      const productQty = {};
+      for (const doc of allSalesSnap.docs) {
+        const sale = doc.data();
+        if (sale.date.startsWith(currentMonth)) {
+          for (const item of sale.items) {
+            productQty[item.name] = (productQty[item.name] || 0) + item.qty;
+          }
+        }
+      }
       const topProductsDiv = document.getElementById('topProductsList');
-      if (topProductsDiv) topProductsDiv.innerHTML = '<div class="small-text">Top products report available after more sales.</div>';
+      if (topProductsDiv) {
+        const top = Object.entries(productQty).sort((a,b) => b[1] - a[1]).slice(0,5);
+        topProductsDiv.innerHTML = top.length ? top.map(([name, qty]) => `<div class="report-item"><span>${name}</span><span>${qty} sold</span></div>`).join('') : '<div class="small-text">No sales this month.</div>';
+      }
       const profitDiv = document.getElementById('profitByProductList');
-      if (profitDiv) profitDiv.innerHTML = '<div class="small-text">Profit report available after more sales.</div>';
+      if (profitDiv) profitDiv.innerHTML = '<div class="small-text">Profit calculation not yet implemented.</div>';
+      const expenseCategories = {};
+      expensesSnap.forEach(d => { const title = d.data().title; expenseCategories[title] = (expenseCategories[title] || 0) + d.data().amount; });
+      const expLabels = Object.keys(expenseCategories);
+      const expData = Object.values(expenseCategories);
+      const expCtx = document.getElementById('expenseChart')?.getContext('2d');
+      if (expCtx) {
+        if (expenseChart) expenseChart.destroy();
+        expenseChart = new Chart(expCtx, { type: 'pie', data: { labels: expLabels, datasets: [{ data: expData, backgroundColor: ['#ff7e9e', '#a0c4ff', '#c5a3ff', '#ffb347'] }] } });
+      }
       const breakdownDiv = document.getElementById('expenseBreakdownList');
-      if (breakdownDiv) breakdownDiv.innerHTML = '<div class="small-text">Expense breakdown available after adding expenses.</div>';
+      if (breakdownDiv) {
+        breakdownDiv.innerHTML = expLabels.map((l, i) => `<div class="report-item"><span>${l}</span><span>${formatMoney(expData[i])}</span></div>`).join('');
+      }
       document.getElementById('exportSalesBtn')?.addEventListener('click', async () => {
         const allSales = await db.collection('sales').where('storeId', '==', ownerId).get();
         let csv = "Date,Amount,Profit,Items\n";
@@ -570,6 +593,7 @@
       URL.revokeObjectURL(link.href);
     }
 
+    // Settings
     function loadSettingsIntoForm() {
       if (businessSettings) {
         document.getElementById('settingsBizName').value = businessSettings.name || '';
@@ -617,34 +641,17 @@
       } catch(err) { alert('Save failed: ' + err.message); }
     });
 
-    // Invite Cashier - fixed
-    const inviteBtn = document.getElementById('inviteBtn');
-    if (inviteBtn) {
-      inviteBtn.onclick = async () => {
-        const email = document.getElementById('inviteEmail').value.trim();
-        const msgDiv = document.getElementById('inviteMsg');
-        if (!email) {
-          msgDiv.innerText = 'Enter email address';
-          return;
-        }
-        msgDiv.innerText = 'Sending...';
-        try {
-          await db.collection('invitations').add({
-            email: email,
-            role: 'cashier',
-            storeAdminId: currentUser.uid,
-            used: false,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-          });
-          msgDiv.innerText = `Invitation sent to ${email}`;
-          document.getElementById('inviteEmail').value = '';
-          setTimeout(() => msgDiv.innerText = '', 3000);
-        } catch (err) {
-          msgDiv.innerText = 'Error: ' + err.message;
-        }
-      };
-    }
+    // Staff invite
+    document.getElementById('inviteBtn')?.addEventListener('click', async () => {
+      const email = document.getElementById('inviteEmail').value.trim();
+      if (!email) { document.getElementById('inviteMsg').innerText = 'Enter email address'; return; }
+      await db.collection('invitations').add({ email, role: 'cashier', storeAdminId: currentUser.uid, used: false, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+      document.getElementById('inviteMsg').innerText = `Invitation sent to ${email}`;
+      document.getElementById('inviteEmail').value = '';
+      setTimeout(() => { document.getElementById('inviteMsg').innerText = ''; }, 3000);
+    });
 
+    // Welcome
     async function loadWelcome() {
       const welcomeDiv = document.getElementById('welcomeSection');
       if (welcomeDiv) {
@@ -656,6 +663,7 @@
       }
     }
 
+    // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -678,7 +686,9 @@
     setInterval(updateDashboard, 10000);
   }
 
+  // ==================== INITIALIZATION ====================
   (async () => {
+    // Install button and iOS banner
     function setupInstallButton() {
       if (document.getElementById('installBtn')) return;
       const style = document.createElement('style');
@@ -722,6 +732,7 @@
     });
     if (!user) { window.location.href = 'index.html'; return; }
     currentUser = user;
+    // Ensure user document exists
     const userDoc = await db.collection('users').doc(user.uid).get();
     if (!userDoc.exists) {
       await db.collection('users').doc(user.uid).set({ email: user.email, role: 'admin', storeAdminId: user.uid });
