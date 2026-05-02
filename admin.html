@@ -152,6 +152,7 @@
         <div id="dashboardTab" class="tab-pane active">
           <div id="welcomeSection" class="welcome-section"></div>
           <div class="card"><div class="card-title">Today's Summary</div><div class="stat-grid"><div class="stat-card"><div class="stat-value" id="todaySales">₦0</div><div class="stat-label">Sales</div></div><div class="stat-card"><div class="stat-value" id="todayProfit">₦0</div><div class="stat-label">Profit</div></div></div></div>
+          <div class="card"><div class="card-title">Yesterday's Snapshot</div><div class="stat-grid"><div class="stat-card"><div class="stat-value" id="yesterdaySales">₦0</div><div class="stat-label">Sales</div></div><div class="stat-card"><div class="stat-value" id="yesterdayProfit">₦0</div><div class="stat-label">Profit</div></div></div></div>
           <div class="card"><div class="card-title">Low Stock (<10)</div><div id="lowStockList"></div></div>
           <div class="card"><div class="card-title">Quick Actions</div><div class="flex"><button onclick="showModal('addProductModal')" class="btn-primary">➕ Add Product</button><button onclick="showModal('addCategoryModal')" class="btn-outline">📁 Add Category</button></div></div>
         </div>
@@ -293,11 +294,23 @@
 
     async function updateDashboard() {
       const today = new Date().toISOString().slice(0,10);
-      const salesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', today).get();
+      const yesterdayDate = new Date();
+      yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+      const yesterday = yesterdayDate.toISOString().slice(0,10);
+
+      // Today's sales & profit
+      const todaySalesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', today).get();
       let totalSales = 0, totalProfit = 0;
-      salesSnap.forEach(d => { totalSales += d.data().amount; totalProfit += d.data().profit; });
+      todaySalesSnap.forEach(d => { totalSales += d.data().amount; totalProfit += d.data().profit; });
       document.getElementById('todaySales').innerText = formatMoney(totalSales);
       document.getElementById('todayProfit').innerText = formatMoney(totalProfit);
+
+      // Yesterday's sales & profit
+      const yesterdaySalesSnap = await db.collection('sales').where('storeId', '==', currentUser.uid).where('date', '==', yesterday).get();
+      let yesterdaySales = 0, yesterdayProfit = 0;
+      yesterdaySalesSnap.forEach(d => { yesterdaySales += d.data().amount; yesterdayProfit += d.data().profit; });
+      document.getElementById('yesterdaySales').innerText = formatMoney(yesterdaySales);
+      document.getElementById('yesterdayProfit').innerText = formatMoney(yesterdayProfit);
     }
 
     async function renderExpenses() {
@@ -604,15 +617,17 @@
       } catch(err) { alert('Save failed: ' + err.message); }
     });
 
-    // Invite Cashier - fixed event listener
+    // Invite Cashier - fixed
     const inviteBtn = document.getElementById('inviteBtn');
     if (inviteBtn) {
-      inviteBtn.addEventListener('click', async () => {
+      inviteBtn.onclick = async () => {
         const email = document.getElementById('inviteEmail').value.trim();
+        const msgDiv = document.getElementById('inviteMsg');
         if (!email) {
-          document.getElementById('inviteMsg').innerText = 'Enter email address';
+          msgDiv.innerText = 'Enter email address';
           return;
         }
+        msgDiv.innerText = 'Sending...';
         try {
           await db.collection('invitations').add({
             email: email,
@@ -621,13 +636,13 @@
             used: false,
             createdAt: firebase.firestore.FieldValue.serverTimestamp()
           });
-          document.getElementById('inviteMsg').innerText = `Invitation sent to ${email}`;
+          msgDiv.innerText = `Invitation sent to ${email}`;
           document.getElementById('inviteEmail').value = '';
-          setTimeout(() => { document.getElementById('inviteMsg').innerText = ''; }, 3000);
+          setTimeout(() => msgDiv.innerText = '', 3000);
         } catch (err) {
-          document.getElementById('inviteMsg').innerText = 'Error: ' + err.message;
+          msgDiv.innerText = 'Error: ' + err.message;
         }
-      });
+      };
     }
 
     async function loadWelcome() {
