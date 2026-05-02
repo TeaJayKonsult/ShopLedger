@@ -161,7 +161,6 @@
               <div class="stat-card"><div class="stat-value" id="todayProfit">₦0</div><div class="stat-label">Profit</div></div>
             </div>
           </div>
-          <!-- NEW: Yesterday's Summary Card -->
           <div class="card">
             <div class="card-title">Yesterday's Summary</div>
             <div class="stat-grid">
@@ -323,7 +322,6 @@
       container.innerHTML = lowStockItems.map(p => `<div class="alert-badge mb-1">⚠️ ${p.name} (${p.stock} left)</div>`).join('');
     }
     
-    // UPDATED: fetch today + yesterday summaries
     async function updateDashboard() {
       const today = new Date().toISOString().slice(0,10);
       const yesterdayDate = new Date();
@@ -446,85 +444,152 @@
       const total = cart.reduce((s,i)=>s+(i.price*i.qty),0);
       if (totalSpan) totalSpan.innerText = formatMoney(total);
     }
-    document.getElementById('checkoutBtn')?.addEventListener('click', async () => {
-      if (cart.length === 0) return alert("Cart empty");
-      const total = cart.reduce((s,i)=>s+(i.price*i.qty),0);
-      let profit = 0;
-      for (let item of cart) {
-        const prod = products.find(p => p.id === item.id);
-        profit += (item.price - prod.cost) * item.qty;
-      }
-      const sale = {
-        storeId: currentUser.uid,
-        userId: currentUser.uid,
-        date: new Date().toISOString().slice(0,10),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-        items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
-        amount: total,
-        profit: profit
-      };
-      await db.collection('sales').add(sale);
-      for (let item of cart) {
-        const prod = products.find(p => p.id === item.id);
-        const newStock = prod.stock - item.qty;
-        await db.collection('products').doc(item.id).update({ stock: newStock });
-      }
-      await refreshAll();
-      cart = [];
-      renderCart();
-      await updateDashboard();
-      generateReceipt(sale.items, total);
-    });
+
+    // FIXED: Checkout with error handling and robust receipt generation
+    const checkoutBtn = document.getElementById('checkoutBtn');
+    if (checkoutBtn) {
+      checkoutBtn.addEventListener('click', async () => {
+        try {
+          if (cart.length === 0) {
+            alert("Cart is empty. Add some products first.");
+            return;
+          }
+          
+          // Calculate totals
+          const total = cart.reduce((sum, item) => sum + (item.price * item.qty), 0);
+          let profit = 0;
+          for (let item of cart) {
+            const prod = products.find(p => p.id === item.id);
+            if (!prod) throw new Error(`Product ${item.name} not found in inventory`);
+            profit += (item.price - prod.cost) * item.qty;
+          }
+          
+          // Create sale record
+          const sale = {
+            storeId: currentUser.uid,
+            userId: currentUser.uid,
+            date: new Date().toISOString().slice(0,10),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            items: cart.map(i => ({ id: i.id, name: i.name, qty: i.qty, price: i.price })),
+            amount: total,
+            profit: profit
+          };
+          await db.collection('sales').add(sale);
+          
+          // Update stock levels
+          for (let item of cart) {
+            const prod = products.find(p => p.id === item.id);
+            const newStock = prod.stock - item.qty;
+            await db.collection('products').doc(item.id).update({ stock: newStock });
+          }
+          
+          // Refresh data and UI
+          await refreshAll();
+          cart = [];
+          renderCart();
+          await updateDashboard();
+          
+          // Generate and show receipt
+          generateReceipt(sale.items, total);
+        } catch (err) {
+          console.error("Checkout error:", err);
+          alert("Checkout failed: " + err.message);
+        }
+      });
+    }
 
     function generateReceipt(items, total) {
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      let y = 20;
-      doc.setFontSize(16);
-      doc.text(businessSettings?.name || "ShopLedger", 105, y, { align: "center" });
-      y += 6;
-      doc.setFontSize(9);
-      if (businessSettings?.address) doc.text(businessSettings.address, 105, y, { align: "center" });
-      y += 5;
-      if (businessSettings?.phone) doc.text(`Tel: ${businessSettings.phone}`, 105, y, { align: "center" });
-      y += 8;
-      doc.setFontSize(10);
-      doc.text(formatDateTime(), 105, y, { align: "center" });
-      y += 8;
-      doc.line(20, y, 190, y);
-      y += 6;
-      doc.text("Item", 20, y); doc.text("Qty", 85, y); doc.text("Price", 120, y); doc.text("Total", 160, y);
-      y += 6;
-      doc.line(20, y, 190, y);
-      y += 4;
-      for (let item of items) {
-        const lineTotal = item.qty * item.price;
-        doc.text(item.name.substring(0, 18), 20, y);
-        doc.text(item.qty.toString(), 85, y);
-        doc.text(`₦${item.price}`, 120, y);
-        doc.text(`₦${lineTotal}`, 160, y);
-        y += 6;
-        if (y > 270) { doc.addPage(); y = 20; }
+      // Build text preview
+      let preview = `${businessSettings?.name || "ShopLedger"}\n`;
+      if (businessSettings?.address) preview += `${businessSettings.address}\n`;
+      if (businessSettings?.phone) preview += `Tel: ${businessSettings.phone}\n`;
+      preview += `${formatDateTime()}\n`;
+      preview += `${'-'.repeat(30)}\n`;
+      for (let i of items) {
+        preview += `${i.name} x${i.qty} @₦${i.price} = ₦${i.qty*i.price}\n`;
       }
-      doc.line(20, y, 190, y);
-      y += 8;
-      doc.setFontSize(12);
-      doc.text(`Total: ₦${total}`, 150, y);
-      y += 12;
-      doc.setFontSize(9);
-      doc.text("ShopLedger · Developed by TeaJay Konsult Ltd", 105, y, { align: "center" });
-      window.lastReceiptPdf = doc;
-      let preview = `${businessSettings?.name || "ShopLedger"}\n${businessSettings?.address || ""}\n${businessSettings?.phone || ""}\n${formatDateTime()}\n${'-'.repeat(30)}\n`;
-      for (let i of items) preview += `${i.name} x${i.qty} @₦${i.price} = ₦${i.qty*i.price}\n`;
-      preview += `${'-'.repeat(30)}\nTotal: ₦${total}\nShopLedger · TeaJay Konsult`;
+      preview += `${'-'.repeat(30)}\n`;
+      preview += `Total: ₦${total}\n`;
+      preview += `ShopLedger · TeaJay Konsult`;
+
       const previewDiv = document.getElementById('receiptPreview');
       if (previewDiv) previewDiv.innerText = preview;
+      
+      // Try to generate PDF but don't fail if library missing
+      try {
+        const pdfLib = window.jspdf;
+        if (pdfLib && typeof pdfLib.jsPDF === 'function') {
+          const { jsPDF } = pdfLib;
+          const doc = new jsPDF();
+          let y = 20;
+          doc.setFontSize(16);
+          doc.text(businessSettings?.name || "ShopLedger", 105, y, { align: "center" });
+          y += 6;
+          doc.setFontSize(9);
+          if (businessSettings?.address) doc.text(businessSettings.address, 105, y, { align: "center" });
+          y += 5;
+          if (businessSettings?.phone) doc.text(`Tel: ${businessSettings.phone}`, 105, y, { align: "center" });
+          y += 8;
+          doc.setFontSize(10);
+          doc.text(formatDateTime(), 105, y, { align: "center" });
+          y += 8;
+          doc.line(20, y, 190, y);
+          y += 6;
+          doc.text("Item", 20, y); doc.text("Qty", 85, y); doc.text("Price", 120, y); doc.text("Total", 160, y);
+          y += 6;
+          doc.line(20, y, 190, y);
+          y += 4;
+          for (let item of items) {
+            const lineTotal = item.qty * item.price;
+            doc.text(item.name.substring(0, 18), 20, y);
+            doc.text(item.qty.toString(), 85, y);
+            doc.text(`₦${item.price}`, 120, y);
+            doc.text(`₦${lineTotal}`, 160, y);
+            y += 6;
+            if (y > 270) { doc.addPage(); y = 20; }
+          }
+          doc.line(20, y, 190, y);
+          y += 8;
+          doc.setFontSize(12);
+          doc.text(`Total: ₦${total}`, 150, y);
+          y += 12;
+          doc.setFontSize(9);
+          doc.text("ShopLedger · Developed by TeaJay Konsult Ltd", 105, y, { align: "center" });
+          window.lastReceiptPdf = doc;
+        } else {
+          console.warn("jsPDF not available, PDF download disabled");
+          window.lastReceiptPdf = null;
+        }
+      } catch (pdfErr) {
+        console.error("PDF generation error:", pdfErr);
+        window.lastReceiptPdf = null;
+        alert("Receipt preview is ready, but PDF generation failed. You can still share or print the text.");
+      }
+      
       showModal('receiptModal');
     }
-    function downloadReceipt() { if (window.lastReceiptPdf) window.lastReceiptPdf.save(`receipt_${Date.now()}.pdf`); else alert("No receipt"); }
-    function shareReceiptWhatsApp() { window.open(`https://wa.me/?text=${encodeURIComponent(document.getElementById('receiptPreview')?.innerText || '')}`, '_blank'); }
-    document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadReceipt);
-    document.getElementById('shareReceiptBtn')?.addEventListener('click', shareReceiptWhatsApp);
+    
+    function downloadReceipt() { 
+      if (window.lastReceiptPdf) {
+        window.lastReceiptPdf.save(`receipt_${Date.now()}.pdf`);
+      } else {
+        alert("PDF not available. You can copy the text receipt from the preview.");
+      }
+    }
+    
+    function shareReceiptWhatsApp() { 
+      const previewText = document.getElementById('receiptPreview')?.innerText || '';
+      if (previewText) {
+        window.open(`https://wa.me/?text=${encodeURIComponent(previewText)}`, '_blank');
+      } else {
+        alert("No receipt to share.");
+      }
+    }
+    
+    const downloadBtn = document.getElementById('downloadPdfBtn');
+    const shareBtn = document.getElementById('shareReceiptBtn');
+    if (downloadBtn) downloadBtn.addEventListener('click', downloadReceipt);
+    if (shareBtn) shareBtn.addEventListener('click', shareReceiptWhatsApp);
 
     async function loadReports() {
       const ownerId = currentUser.uid;
