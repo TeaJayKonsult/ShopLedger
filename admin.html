@@ -53,7 +53,6 @@
 <div id="appRoot"></div>
 
 <script>
-  // ==================== FIREBASE CONFIG ====================
   const firebaseConfig = {
     apiKey: "AIzaSyAEV8gjcAv4wTcMwzS9ddm-ooPC8dhBj8Y",
     authDomain: "shopledger-6e10c.firebaseapp.com",
@@ -80,17 +79,17 @@
   function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
   window.showModal = showModal; window.closeModal = closeModal;
 
-  // ==================== BUSINESS SETUP ====================
+  // Business Setup (unchanged)
   async function showBusinessSetup() {
     const root = document.getElementById('appRoot');
     root.innerHTML = `
       <div class="container">
         <div class="card">
-          <h2 style="margin-bottom: 16px;">Business Setup Required</h2>
-          <p style="margin-bottom: 20px;">Please enter your store details to continue.</p>
+          <h2>Business Setup Required</h2>
+          <p>Please enter your store details to continue.</p>
           <div class="flex" style="justify-content:center; margin-bottom:16px">
             <img id="setupLogoPreview" class="logo-preview" style="display:none">
-            <button id="setupUploadLogoBtn" class="btn-outline" style="width:auto; padding:8px 16px">Upload Logo</button>
+            <button id="setupUploadLogoBtn" class="btn-outline">Upload Logo</button>
             <input type="file" id="setupLogoFile" accept="image/*" style="display:none">
           </div>
           <div><label>Business Name</label><input type="text" id="setupBizName" class="input-field" placeholder="Your store name"></div>
@@ -137,7 +136,6 @@
     };
   }
 
-  // ==================== MAIN ADMIN DASHBOARD ====================
   async function showAdminDashboard() {
     const root = document.getElementById('appRoot');
     root.innerHTML = `
@@ -205,52 +203,12 @@
         <footer>© 2026 TeaJay Konsult Ltd.</footer>
       </div>
 
-      <!-- Modals -->
-      <div id="addCategoryModal" class="modal">
-        <div class="modal-content">
-          <h3>Add Category</h3>
-          <input type="text" id="catName" class="input-field" placeholder="Category name">
-          <button onclick="saveCategory()" class="btn-primary">Save</button>
-          <button onclick="closeModal('addCategoryModal')" class="btn-outline">Cancel</button>
-        </div>
-      </div>
-      <div id="addProductModal" class="modal">
-        <div class="modal-content">
-          <h3>Add Product</h3>
-          <input type="text" id="prodName" placeholder="Name" class="input-field">
-          <select id="prodCategory" class="input-field"></select>
-          <input type="number" id="prodCost" placeholder="Cost price" class="input-field">
-          <input type="number" id="prodPrice" placeholder="Selling price" class="input-field">
-          <input type="number" id="prodStock" placeholder="Initial stock" class="input-field">
-          <input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field">
-          <button onclick="saveProduct()" class="btn-primary">Save</button>
-          <button onclick="closeModal('addProductModal')" class="btn-outline">Cancel</button>
-        </div>
-      </div>
-      <div id="addExpenseModal" class="modal">
-        <div class="modal-content">
-          <h3>Add Expense</h3>
-          <input type="text" id="expenseName" placeholder="Title" class="input-field">
-          <input type="number" id="expenseAmount" placeholder="Amount" class="input-field">
-          <input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field">
-          <button onclick="saveExpense()" class="btn-primary">Save</button>
-          <button onclick="closeModal('addExpenseModal')" class="btn-outline">Cancel</button>
-        </div>
-      </div>
-      <div id="receiptModal" class="modal">
-        <div class="modal-content">
-          <h3>Receipt</h3>
-          <div id="receiptPreview" class="receipt-preview"></div>
-          <div class="flex">
-            <button id="downloadPdfBtn" class="btn-primary">📄 Download PDF</button>
-            <button id="shareReceiptBtn" class="btn-outline">📤 Share WhatsApp</button>
-          </div>
-          <button onclick="closeModal('receiptModal')" class="btn-outline mt-2">Close</button>
-        </div>
-      </div>
+      <div id="addCategoryModal" class="modal"><div class="modal-content"><h3>Add Category</h3><input type="text" id="catName" class="input-field" placeholder="Category name"><button onclick="saveCategory()" class="btn-primary">Save</button><button onclick="closeModal('addCategoryModal')" class="btn-outline">Cancel</button></div></div>
+      <div id="addProductModal" class="modal"><div class="modal-content"><h3>Add Product</h3><input type="text" id="prodName" placeholder="Name" class="input-field"><select id="prodCategory" class="input-field"></select><input type="number" id="prodCost" placeholder="Cost price" class="input-field"><input type="number" id="prodPrice" placeholder="Selling price" class="input-field"><input type="number" id="prodStock" placeholder="Initial stock" class="input-field"><input type="number" id="prodReorder" placeholder="Reorder level (default 10)" value="10" class="input-field"><button onclick="saveProduct()" class="btn-primary">Save</button><button onclick="closeModal('addProductModal')" class="btn-outline">Cancel</button></div></div>
+      <div id="addExpenseModal" class="modal"><div class="modal-content"><h3>Add Expense</h3><input type="text" id="expenseName" placeholder="Title" class="input-field"><input type="number" id="expenseAmount" placeholder="Amount" class="input-field"><input type="text" id="expenseNote" placeholder="Note (optional)" class="input-field"><button onclick="saveExpense()" class="btn-primary">Save</button><button onclick="closeModal('addExpenseModal')" class="btn-outline">Cancel</button></div></div>
+      <div id="receiptModal" class="modal"><div class="modal-content"><h3>Receipt</h3><div id="receiptPreview" class="receipt-preview"></div><div class="flex"><button id="downloadPdfBtn" class="btn-primary">📄 Download PDF</button><button id="shareReceiptBtn" class="btn-outline">📤 Share WhatsApp</button></div><button onclick="closeModal('receiptModal')" class="btn-outline mt-2">Close</button></div></div>
     `;
 
-    // Global data
     let categories = [], products = [], cart = [], lowStockItems = [];
     let salesChart, monthlySummaryChart, expenseChart;
 
@@ -277,26 +235,21 @@
       lowStockItems = products.filter(p => p.stock <= (p.reorderLevel || 10));
     }
 
-    // ========== FIXED RENDER FUNCTIONS WITH DELETE EVENT LISTENERS ==========
+    // FIXED DELETE FUNCTIONS using direct event listeners after innerHTML injection
     function renderCategories() {
       const container = document.getElementById('categoriesList');
       if (!container) return;
-      if (!categories.length) {
-        container.innerHTML = '<div>No categories</div>';
-        return;
-      }
+      if (!categories.length) { container.innerHTML = '<div>No categories</div>'; return; }
       container.innerHTML = categories.map(c => `
         <div class="category-item" data-id="${c.id}">
           <span>${c.name}</span>
           <button class="icon-btn delete-category" data-id="${c.id}">🗑️</button>
         </div>
       `).join('');
-      
-      // Attach delete event listeners
       document.querySelectorAll('.delete-category').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const id = btn.getAttribute('data-id');
-          if (confirm('Delete this category? Products in this category will remain but category field will be empty.')) {
+          if (confirm('Delete this category?')) {
             await db.collection('categories').doc(id).delete();
             await refreshAll();
           }
@@ -307,17 +260,13 @@
     function renderProducts() {
       const container = document.getElementById('productsList');
       if (!container) return;
-      if (!products.length) {
-        container.innerHTML = '<div>No products</div>';
-        return;
-      }
+      if (!products.length) { container.innerHTML = '<div>No products</div>'; return; }
       container.innerHTML = products.map(p => `
         <div class="product-item" data-id="${p.id}">
           <div><strong>${p.name}</strong><br>${p.category} | Stock: ${p.stock} | ₦${p.price}</div>
           <button class="icon-btn delete-product" data-id="${p.id}">🗑️</button>
         </div>
       `).join('');
-      
       document.querySelectorAll('.delete-product').forEach(btn => {
         btn.addEventListener('click', async (e) => {
           const id = btn.getAttribute('data-id');
@@ -328,7 +277,6 @@
         });
       });
     }
-    // ============================================================
 
     function renderProductListPos() {
       const container = document.getElementById('productListPos');
@@ -373,7 +321,6 @@
       }
     }
 
-    // CRUD operations (save functions only – delete handled by event listeners)
     window.saveCategory = async () => {
       const name = document.getElementById('catName').value.trim();
       if (!name) return;
@@ -414,7 +361,7 @@
       await db.collection('expenses').doc(id).delete();
       await refreshAll();
     };
-    // POS cart functions (unchanged)
+
     window.addToCart = (productId) => {
       const product = products.find(p => p.id === productId);
       if (!product || product.stock <= 0) return alert("Out of stock");
@@ -466,6 +413,7 @@
       await updateDashboard();
       generateReceipt(sale.items, total);
     });
+
     function generateReceipt(items, total) {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
@@ -516,7 +464,6 @@
     document.getElementById('downloadPdfBtn')?.addEventListener('click', downloadReceipt);
     document.getElementById('shareReceiptBtn')?.addEventListener('click', shareReceiptWhatsApp);
 
-    // Reports (simplified, but functional)
     async function loadReports() {
       const ownerId = currentUser.uid;
       const today = new Date();
@@ -567,7 +514,6 @@
       if (tableDiv) {
         tableDiv.innerHTML = `<div class="report-item"><strong>Month</strong><strong>Sales (₦)</strong><strong>Expenses (₦)</strong><strong>Profit (₦)</strong></div>` + labels.map((l, i) => `<div class="report-item"><span>${l}</span><span>${formatMoney(salesData[i])}</span><span>${formatMoney(monthlyExpenses[i])}</span><span>${formatMoney(monthlyProfits[i])}</span></div>`).join('');
       }
-      // Other reports omitted for brevity but can be added later
       const topProductsDiv = document.getElementById('topProductsList');
       if (topProductsDiv) topProductsDiv.innerHTML = '<div class="small-text">Top products report available after more sales.</div>';
       const profitDiv = document.getElementById('profitByProductList');
@@ -595,8 +541,6 @@
       link.click();
       URL.revokeObjectURL(link.href);
     }
-
-    // Settings
     function loadSettingsIntoForm() {
       if (businessSettings) {
         document.getElementById('settingsBizName').value = businessSettings.name || '';
@@ -643,8 +587,6 @@
         setTimeout(() => { if (msgDiv) msgDiv.innerText = ''; }, 3000);
       } catch(err) { alert('Save failed: ' + err.message); }
     });
-
-    // Staff invite
     document.getElementById('inviteBtn')?.addEventListener('click', async () => {
       const email = document.getElementById('inviteEmail').value.trim();
       if (!email) { document.getElementById('inviteMsg').innerText = 'Enter email address'; return; }
@@ -653,7 +595,6 @@
       document.getElementById('inviteEmail').value = '';
       setTimeout(() => { document.getElementById('inviteMsg').innerText = ''; }, 3000);
     });
-
     async function loadWelcome() {
       const welcomeDiv = document.getElementById('welcomeSection');
       if (welcomeDiv) {
@@ -664,8 +605,6 @@
         }
       }
     }
-
-    // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -682,13 +621,11 @@
       });
     });
     document.getElementById('searchProduct')?.addEventListener('input', () => renderProductListPos());
-
     await refreshAll();
     await loadWelcome();
     setInterval(updateDashboard, 10000);
   }
 
-  // ==================== INITIALIZATION ====================
   (async () => {
     function setupInstallButton() {
       if (document.getElementById('installBtn')) return;
