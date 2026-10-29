@@ -1,0 +1,8 @@
+{
+  "name": "ShopLedger",
+  "description": "POS & inventory management app for Nigerian small stores with offline sales, receipts, expenses, and business analytics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

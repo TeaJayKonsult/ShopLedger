@@ -1,0 +1,30 @@
+{
+  "name": "shopledger-saas",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "ShopLedger - Multi-tenant POS & Inventory SaaS for Nigerian Small Stores",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 3000"
+  },
+  "keywords": [
+    "pos",
+    "inventory",
+    "nigeria",
+    "saas",
+    "multi-tenant",
+    "pwa"
+  ],
+  "author": "TeaJay Konsult Ltd",
+  "license": "ISC",
+  "dependencies": {
+    "lucide-react": "^1.64.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.2",
+    "vite": "^8.3.5"
+  }
+}
