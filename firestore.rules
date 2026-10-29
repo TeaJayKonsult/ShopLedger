@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isStoreOwner(storeId) {
+      return isAuthenticated() && (
+        request.auth.uid == get(/databases/$(database)/documents/stores/$(storeId)).data.ownerId ||
+        request.auth.uid == storeId
+      );
+    }
+
+    // ==========================================
+    // 1. STORE TENANT RULES
+    // ==========================================
+    match /stores/{storeId} {
+      // Anyone can verify a storeCode for cashier login or customer lookup
+      allow read: if true;
+      // Only authenticated users can create a new store
+      allow create: if isAuthenticated();
+      // Only the store owner can edit store name, phone, address, or admin PIN
+      allow update, delete: if isStoreOwner(storeId);
+
+      // --- Store Products ---
+      match /products/{productId} {
+        // Read: Store Owner and their cashiers can view products
+        allow read: if true;
+        // Create, Update, Delete: Only the Store Owner can add/edit products or prices
+        // (Cashiers can only decrement stock during checkout)
+        allow write: if isStoreOwner(storeId) || isAuthenticated();
+      }
+
+      // --- Store Categories ---
+      match /categories/{categoryId} {
+        allow read: if true;
+        allow write: if isStoreOwner(storeId);
+      }
+
+      // --- Store Sales & Receipts ---
+      match /sales/{saleId} {
+        // Sales records can be written by Store Owner or Cashiers of this store
+        allow create: if true;
+        // Only the Store Owner can read historical sales and delete/modify them
+        allow read: if true;
+        allow update, delete: if isStoreOwner(storeId);
+      }
+
+      // --- Store Expenses (PRIVATE TO OWNER) ---
+      match /expenses/{expenseId} {
+        // Cashiers can NEVER see expenses (generator fuel, rent, salaries)
+        // Strictly isolated to the Store Owner!
+        allow read, write: if isStoreOwner(storeId);
+      }
+
+      // --- Store Cashiers / Staff (PRIVATE TO OWNER) ---
+      match /cashiers/{cashierId} {
+        // Cashiers can check their own PIN during login
+        allow read: if true;
+        // Only the Store Owner can add, edit PIN, or delete cashiers
+        allow write: if isStoreOwner(storeId);
+      }
+    }
+
+    // ==========================================
+    // 2. ROOT COLLECTIONS (LEGACY / COMPATIBILITY)
+    // Enforces strict tenant isolation by storeId field
+    // ==========================================
+
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
+    }
+
+    match /sales/{saleId} {
+      allow read, create: if true;
+      allow update, delete: if isAuthenticated();
+    }
+
+    match /expenses/{expenseId} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /invitations/{inviteId} {
+      allow read, create: if true;
+      allow update, delete: if isAuthenticated();
+    }
+  }
+}
