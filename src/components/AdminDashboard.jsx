@@ -10,7 +10,7 @@ import {
   getStoreCategories, addStoreCategory,
   getStoreCashiers, addCashierToStore, removeCashierFromStore,
   getStoreSales, getStoreExpenses, addStoreExpense, deleteStoreExpense,
-  formatNaira, DEMO_STORES
+  formatNaira
 } from '../services/storeService';
 
 export default function AdminDashboard({ store, onLaunchPOS, onSwitchStore }) {
@@ -66,32 +66,32 @@ export default function AdminDashboard({ store, onLaunchPOS, onSwitchStore }) {
   const lowStockItems = products.filter(p => p.stock <= (p.reorderLevel || 10));
 
   // Product Actions
-  const handleSaveProduct = (e) => {
+  const handleSaveProduct = async (e) => {
     e.preventDefault();
     if (!prodForm.name.trim() || !prodForm.price) return;
-    saveStoreProduct(store.id, prodForm);
+    await saveStoreProduct(store.id, prodForm);
     setProdForm({ name: '', category: '', cost: '', price: '', stock: '', reorderLevel: '10' });
     setShowAddProductModal(false);
     reloadData();
   };
 
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = async (productId) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
-    deleteStoreProduct(store.id, productId);
+    await deleteStoreProduct(store.id, productId);
     reloadData();
   };
 
-  const handleRestock = (productId) => {
-    quickRestockProduct(store.id, productId, 10);
+  const handleRestock = async (productId) => {
+    await quickRestockProduct(store.id, productId, 10);
     reloadData();
   };
 
   // Staff / Cashier Actions
-  const handleAddCashier = (e) => {
+  const handleAddCashier = async (e) => {
     e.preventDefault();
     setStaffError('');
     try {
-      const res = addCashierToStore({
+      const res = await addCashierToStore({
         storeId: store.id,
         name: cashierName,
         pin: cashierPin,
@@ -107,9 +107,9 @@ export default function AdminDashboard({ store, onLaunchPOS, onSwitchStore }) {
     }
   };
 
-  const handleRemoveCashier = (cashierId) => {
+  const handleRemoveCashier = async (cashierId) => {
     if (!confirm('Remove this cashier? They will lose register access immediately.')) return;
-    removeCashierFromStore(store.id, cashierId);
+    await removeCashierFromStore(store.id, cashierId);
     reloadData();
   };
 
@@ -119,10 +119,10 @@ export default function AdminDashboard({ store, onLaunchPOS, onSwitchStore }) {
   };
 
   // Expense Actions
-  const handleSaveExpense = (e) => {
+  const handleSaveExpense = async (e) => {
     e.preventDefault();
     if (!expForm.title.trim() || !expForm.amount) return;
-    addStoreExpense(store.id, expForm);
+    await addStoreExpense(store.id, expForm);
     setExpForm({ title: '', category: 'Generator/Fuel', amount: '', note: '' });
     setShowAddExpenseModal(false);
     reloadData();

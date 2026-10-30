@@ -1,135 +1,194 @@
 // src/services/storeService.js
-// ShopLedger Multi-Tenant SaaS Engine with Offline-First Persistence & Firebase Sync
+// ShopLedger Multi-Tenant SaaS Engine with Real Firebase Firestore Sync & Dynamic Stores
 
-// Pre-seeded independent demo stores illustrating the multi-tenancy model
-export const DEMO_STORES = [
-  {
-    id: "store_emeka_elec",
-    name: "Emeka Electronics & Electricals",
-    category: "Electrical Equipment",
-    storeCode: "EMEKA-10",
-    phone: "08031234567",
-    address: "Alaba International Market, Lagos",
-    adminPin: "1234",
-    ownerEmail: "emeka@gmail.com",
-    products: [
-      { id: "p_ee_1", name: "2.5mm Single Core Copper Cable (100m)", category: "Cables", cost: 18500, price: 23000, stock: 15, reorderLevel: 5 },
-      { id: "p_ee_2", name: "18W Cool White LED Ceiling Bulb", category: "Lighting", cost: 1100, price: 1700, stock: 40, reorderLevel: 10 },
-      { id: "p_ee_3", name: "13A Double Switch Socket (Schneider)", category: "Switches & Sockets", cost: 2400, price: 3500, stock: 25, reorderLevel: 8 },
-      { id: "p_ee_4", name: "6-Way Extension Socket (Heavy Duty)", category: "Accessories", cost: 4200, price: 6000, stock: 12, reorderLevel: 4 },
-      { id: "p_ee_5", name: "40A Changeover Switch Box", category: "Power & Distribution", cost: 14000, price: 18500, stock: 4, reorderLevel: 5 } // Low stock!
-    ],
-    categories: ["Cables", "Lighting", "Switches & Sockets", "Accessories", "Power & Distribution"],
-    cashiers: [
-      { id: "c_ee_1", name: "Chidi (Sales Rep)", pin: "1111", phone: "08099887766", role: "cashier", status: "active" }
-    ],
-    expenses: [
-      { id: "e_ee_1", title: "Diesel for Shop Generator", category: "Generator/Fuel", amount: 15000, date: new Date().toISOString().slice(0, 10), note: "15 Litres" }
-    ]
-  },
-  {
-    id: "store_mama_nkechi",
-    name: "Mama Nkechi Provision Store",
-    category: "Groceries & Provisions",
-    storeCode: "NKECHI-20",
-    phone: "08029876543",
-    address: "Surulere, Lagos",
-    adminPin: "1234",
-    ownerEmail: "nkechi@gmail.com",
-    products: [
-      { id: "p_mn_1", name: "Peak Evaporated Milk (158g)", category: "Dairy", cost: 480, price: 600, stock: 72, reorderLevel: 24 },
-      { id: "p_mn_2", name: "Golden Penny Family Loaf Bread", category: "Bakery", cost: 1100, price: 1400, stock: 18, reorderLevel: 10 },
-      { id: "p_mn_3", name: "Milo Refill Pack (500g)", category: "Beverages", cost: 2800, price: 3400, stock: 6, reorderLevel: 10 }, // Low stock!
-      { id: "p_mn_4", name: "Dangote Refined Sugar (500g)", category: "Provisions", cost: 950, price: 1200, stock: 30, reorderLevel: 10 },
-      { id: "p_mn_5", name: "Cabin Biscuit Carton (Small)", category: "Snacks", cost: 3200, price: 4000, stock: 8, reorderLevel: 5 }
-    ],
-    categories: ["Dairy", "Bakery", "Beverages", "Provisions", "Snacks"],
-    cashiers: [
-      { id: "c_mn_1", name: "Blessing (Cashier)", pin: "2222", phone: "08055443322", role: "cashier", status: "active" }
-    ],
-    expenses: [
-      { id: "e_mn_1", title: "Bakery Van Delivery Fee", category: "Transport", amount: 2000, date: new Date().toISOString().slice(0, 10), note: "Bread delivery" }
-    ]
-  },
-  {
-    id: "store_apex_pharmacy",
-    name: "HealthPlus Community Pharmacy",
-    category: "Pharmaceuticals & Healthcare",
-    storeCode: "PHARM-30",
-    phone: "08076543210",
-    address: "Ikeja, Lagos",
-    adminPin: "1234",
-    ownerEmail: "pharmacist@gmail.com",
-    products: [
-      { id: "p_ap_1", name: "Emzor Paracetamol 500mg (Pack of 96)", category: "Analgesics", cost: 900, price: 1400, stock: 50, reorderLevel: 15 },
-      { id: "p_ap_2", name: "Coartem 80/480mg (Malaria Dose)", category: "Antimalarials", cost: 2600, price: 3500, stock: 22, reorderLevel: 10 },
-      { id: "p_ap_3", name: "Vitamin C 1000mg Effervescent (20s)", category: "Supplements", cost: 2100, price: 3000, stock: 5, reorderLevel: 8 }, // Low stock!
-      { id: "p_ap_4", name: "Dettol Antiseptic Liquid (250ml)", category: "First Aid", cost: 1800, price: 2400, stock: 16, reorderLevel: 6 }
-    ],
-    categories: ["Analgesics", "Antimalarials", "Supplements", "First Aid"],
-    cashiers: [
-      { id: "c_ap_1", name: "Femi (Counter Dispenser)", pin: "3333", phone: "08123456789", role: "cashier", status: "active" }
-    ],
-    expenses: [
-      { id: "e_ap_1", title: "Pharmacy Premises Sanitation", category: "Maintenance", amount: 5000, date: new Date().toISOString().slice(0, 10), note: "Weekly cleaning" }
-    ]
-  }
-];
+import {
+  db, auth, googleProvider,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  signOut
+} from './firebase';
+import {
+  collection, doc, getDoc, getDocs, setDoc,
+  addDoc, updateDoc, deleteDoc, query, where, serverTimestamp
+} from 'firebase/firestore';
 
-// Helper to get local tenant storage key
 function getStoreKey(storeId, subKey) {
   return `shopledger_${storeId}_${subKey}`;
 }
 
 // ==========================================
-// STORE REGISTRY & SELECTION
+// USER AUTHENTICATION (EMAIL & PASSWORD / GOOGLE)
+// ==========================================
+
+export async function registerUserWithEmail(email, password) {
+  const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+  return userCredential.user;
+}
+
+export async function loginUserWithEmail(email, password) {
+  const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+  return userCredential.user;
+}
+
+export async function loginUserWithGoogle() {
+  const result = await signInWithPopup(auth, googleProvider);
+  return result.user;
+}
+
+export async function logoutUser() {
+  localStorage.removeItem('shopledger_cashier_session');
+  await signOut(auth);
+}
+
+// ==========================================
+// STORE REGISTRY & PROFILE SETUP (DYNAMIC TENANTS)
 // ==========================================
 
 export function getAllRegisteredStores() {
-  const customStoresRaw = localStorage.getItem('shopledger_custom_stores');
-  let customStores = [];
+  const raw = localStorage.getItem('shopledger_all_stores');
   try {
-    customStores = customStoresRaw ? JSON.parse(customStoresRaw) : [];
+    return raw ? JSON.parse(raw) : [];
   } catch (e) {
-    customStores = [];
+    return [];
   }
-  return [...DEMO_STORES, ...customStores];
 }
 
-export function registerNewStore({ name, phone, address, adminPin, category, ownerEmail }) {
+function saveStoreLocally(store) {
+  const stores = getAllRegisteredStores();
+  const idx = stores.findIndex(s => s.id === store.id);
+  if (idx !== -1) {
+    stores[idx] = store;
+  } else {
+    stores.push(store);
+  }
+  localStorage.setItem('shopledger_all_stores', JSON.stringify(stores));
+}
+
+/**
+ * Fetch the store associated with an authenticated owner UID.
+ * Checks Firestore first, with localStorage fallback.
+ */
+export async function getUserStore(userId) {
+  if (!userId) return null;
+
+  // 1. Check local cache first for instant speed
+  const cached = localStorage.getItem(`shopledger_user_store_${userId}`);
+  if (cached) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed && parsed.id) return parsed;
+    } catch (e) {}
+  }
+
+  // 2. Check Firestore user reference
+  try {
+    const userDocSnap = await getDoc(doc(db, "users", userId));
+    if (userDocSnap.exists()) {
+      const userData = userDocSnap.data();
+      if (userData.storeId) {
+        const storeSnap = await getDoc(doc(db, "stores", userData.storeId));
+        if (storeSnap.exists()) {
+          const storeData = { id: storeSnap.id, ...storeSnap.data() };
+          saveStoreLocally(storeData);
+          localStorage.setItem(`shopledger_user_store_${userId}`, JSON.stringify(storeData));
+          return storeData;
+        }
+      }
+    }
+
+    // Secondary query: look for store by ownerId
+    const q = query(collection(db, "stores"), where("ownerId", "==", userId));
+    const querySnapshot = await getDocs(q);
+    if (!querySnapshot.empty) {
+      const firstDoc = querySnapshot.docs[0];
+      const storeData = { id: firstDoc.id, ...firstDoc.data() };
+      saveStoreLocally(storeData);
+      localStorage.setItem(`shopledger_user_store_${userId}`, JSON.stringify(storeData));
+      return storeData;
+    }
+  } catch (err) {
+    console.warn("Notice: Fetching user store from Firestore encountered an error (using local cache if available):", err);
+  }
+
+  return null;
+}
+
+/**
+ * Create a brand new store profile after email registration
+ */
+export async function createStoreProfile({ ownerId, ownerEmail, name, category, phone, address, adminPin }) {
+  if (!ownerId) throw new Error("Owner ID is required to create a store.");
+  if (!name || !name.trim()) throw new Error("Store business name is required.");
+
   const storeId = "store_" + Date.now();
   const num = Math.floor(1000 + Math.random() * 9000);
-  const prefix = (name.replace(/[^a-zA-Z]/g, '').slice(0, 4) || "SHOP").toUpperCase();
-  const storeCode = `${prefix}-${num.toString().slice(-2)}`;
+  const cleanName = name.replace(/[^a-zA-Z]/g, '').slice(0, 4) || "SHOP";
+  const storeCode = `${cleanName.toUpperCase()}-${num.toString().slice(-2)}`;
 
   const newStore = {
     id: storeId,
     name: name.trim(),
     category: category || "Retail Store",
     storeCode: storeCode,
-    phone: phone || "",
-    address: address || "Nigeria",
-    adminPin: adminPin || "1234",
-    ownerEmail: ownerEmail || "owner@example.com",
-    products: [],
-    categories: ["General"],
-    cashiers: [],
-    expenses: []
+    phone: phone ? phone.trim() : "",
+    address: address ? address.trim() : "Nigeria",
+    adminPin: adminPin ? adminPin.trim() : "1234",
+    ownerId: ownerId,
+    ownerEmail: ownerEmail || "",
+    createdAt: new Date().toISOString()
   };
 
-  const existing = getAllRegisteredStores();
-  const customOnly = existing.filter(s => !DEMO_STORES.some(d => d.id === s.id));
-  customOnly.push(newStore);
-  localStorage.setItem('shopledger_custom_stores', JSON.stringify(customOnly));
-
-  // Initialize store storage
+  // 1. Save locally
+  saveStoreLocally(newStore);
+  localStorage.setItem(`shopledger_user_store_${ownerId}`, JSON.stringify(newStore));
   localStorage.setItem(getStoreKey(storeId, 'products'), JSON.stringify([]));
   localStorage.setItem(getStoreKey(storeId, 'categories'), JSON.stringify(["General"]));
   localStorage.setItem(getStoreKey(storeId, 'cashiers'), JSON.stringify([]));
   localStorage.setItem(getStoreKey(storeId, 'sales'), JSON.stringify([]));
   localStorage.setItem(getStoreKey(storeId, 'expenses'), JSON.stringify([]));
 
+  // 2. Save in Firestore
+  try {
+    await setDoc(doc(db, "stores", storeId), {
+      ...newStore,
+      serverTime: serverTimestamp()
+    });
+
+    await setDoc(doc(db, "users", ownerId), {
+      storeId: storeId,
+      storeCode: storeCode,
+      email: ownerEmail || "",
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  } catch (err) {
+    console.warn("Notice: Firestore profile sync error (offline-ready):", err);
+  }
+
   return newStore;
+}
+
+export async function updateStoreProfile(storeId, updates) {
+  const stores = getAllRegisteredStores();
+  const idx = stores.findIndex(s => s.id === storeId);
+  if (idx !== -1) {
+    stores[idx] = { ...stores[idx], ...updates };
+    localStorage.setItem('shopledger_all_stores', JSON.stringify(stores));
+    if (stores[idx].ownerId) {
+      localStorage.setItem(`shopledger_user_store_${stores[idx].ownerId}`, JSON.stringify(stores[idx]));
+    }
+  }
+
+  try {
+    await updateDoc(doc(db, "stores", storeId), {
+      ...updates,
+      updatedAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn("Notice: Firestore profile update error:", err);
+  }
+
+  return stores[idx] || null;
 }
 
 export function getStoreById(storeId) {
@@ -145,8 +204,7 @@ export function getStoreByCode(storeCode) {
 }
 
 // ==========================================
-// TENANT DATA ISOLATION (PRODUCTS, STOCKS)
-// Strictly scoped to storeId!
+// TENANT DATA ISOLATION (PRODUCTS & STOCKS)
 // ==========================================
 
 export function getStoreProducts(storeId) {
@@ -155,30 +213,25 @@ export function getStoreProducts(storeId) {
   if (stored) {
     try {
       return JSON.parse(stored);
-    } catch (e) {
-      // fallback
-    }
-  }
-  // Initialize from store definition if available
-  const store = getStoreById(storeId);
-  if (store && store.products) {
-    localStorage.setItem(getStoreKey(storeId, 'products'), JSON.stringify(store.products));
-    return store.products;
+    } catch (e) {}
   }
   return [];
 }
 
-export function saveStoreProduct(storeId, productData) {
+export async function saveStoreProduct(storeId, productData) {
   const products = getStoreProducts(storeId);
+  let savedProduct;
+
   if (productData.id) {
-    // Edit existing
+    // Edit existing product
     const index = products.findIndex(p => p.id === productData.id);
     if (index !== -1) {
       products[index] = { ...products[index], ...productData };
+      savedProduct = products[index];
     }
   } else {
     // New product
-    const newProduct = {
+    savedProduct = {
       id: "prod_" + Date.now(),
       name: productData.name,
       category: productData.category || "General",
@@ -187,30 +240,59 @@ export function saveStoreProduct(storeId, productData) {
       stock: Number(productData.stock) || 0,
       reorderLevel: Number(productData.reorderLevel) || 10
     };
-    products.push(newProduct);
+    products.push(savedProduct);
   }
+
+  // 1. Save locally
   localStorage.setItem(getStoreKey(storeId, 'products'), JSON.stringify(products));
+
+  // 2. Sync to Firestore subcollection
+  try {
+    await setDoc(doc(db, "stores", storeId, "products", savedProduct.id), {
+      ...savedProduct,
+      updatedAt: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn("Firestore product sync error:", err);
+  }
+
   return products;
 }
 
-export function deleteStoreProduct(storeId, productId) {
+export async function deleteStoreProduct(storeId, productId) {
   const products = getStoreProducts(storeId).filter(p => p.id !== productId);
   localStorage.setItem(getStoreKey(storeId, 'products'), JSON.stringify(products));
+
+  try {
+    await deleteDoc(doc(db, "stores", storeId, "products", productId));
+  } catch (err) {
+    console.warn("Firestore delete product error:", err);
+  }
+
   return products;
 }
 
-export function quickRestockProduct(storeId, productId, addedQuantity) {
+export async function quickRestockProduct(storeId, productId, addedQuantity) {
   const products = getStoreProducts(storeId);
   const item = products.find(p => p.id === productId);
   if (item) {
     item.stock = (Number(item.stock) || 0) + Number(addedQuantity);
     localStorage.setItem(getStoreKey(storeId, 'products'), JSON.stringify(products));
+
+    try {
+      await updateDoc(doc(db, "stores", storeId, "products", productId), {
+        stock: item.stock,
+        updatedAt: serverTimestamp()
+      });
+    } catch (err) {
+      console.warn("Firestore stock update error:", err);
+    }
   }
   return products;
 }
 
 // ==========================================
-// CATEGORIES
+// CATEGORIES (TENANT ISOLATED)
 // ==========================================
 
 export function getStoreCategories(storeId) {
@@ -218,20 +300,22 @@ export function getStoreCategories(storeId) {
   if (stored) {
     try { return JSON.parse(stored); } catch (e) {}
   }
-  const store = getStoreById(storeId);
-  if (store && store.categories) {
-    localStorage.setItem(getStoreKey(storeId, 'categories'), JSON.stringify(store.categories));
-    return store.categories;
-  }
   return ["General"];
 }
 
-export function addStoreCategory(storeId, categoryName) {
+export async function addStoreCategory(storeId, categoryName) {
   const cats = getStoreCategories(storeId);
   const trimmed = categoryName.trim();
   if (trimmed && !cats.includes(trimmed)) {
     cats.push(trimmed);
     localStorage.setItem(getStoreKey(storeId, 'categories'), JSON.stringify(cats));
+
+    try {
+      await addDoc(collection(db, "stores", storeId, "categories"), {
+        name: trimmed,
+        createdAt: serverTimestamp()
+      });
+    } catch (err) {}
   }
   return cats;
 }
@@ -245,26 +329,21 @@ export function getStoreCashiers(storeId) {
   if (stored) {
     try { return JSON.parse(stored); } catch (e) {}
   }
-  const store = getStoreById(storeId);
-  if (store && store.cashiers) {
-    localStorage.setItem(getStoreKey(storeId, 'cashiers'), JSON.stringify(store.cashiers));
-    return store.cashiers;
-  }
   return [];
 }
 
-export function addCashierToStore({ storeId, name, pin, phone }) {
+export async function addCashierToStore({ storeId, name, pin, phone }) {
   const cashiers = getStoreCashiers(storeId);
   const store = getStoreById(storeId);
   if (!store) throw new Error("Store not found");
 
-  // Check if PIN already used in this store
   if (cashiers.some(c => c.pin === pin)) {
     throw new Error(`PIN "${pin}" is already assigned to another cashier in this store. Please pick a different 4-digit PIN.`);
   }
 
+  const cashierId = "cashier_" + Date.now();
   const newCashier = {
-    id: "cashier_" + Date.now(),
+    id: cashierId,
     name: name.trim(),
     pin: pin.trim(),
     phone: phone ? phone.trim() : "",
@@ -276,7 +355,17 @@ export function addCashierToStore({ storeId, name, pin, phone }) {
   cashiers.push(newCashier);
   localStorage.setItem(getStoreKey(storeId, 'cashiers'), JSON.stringify(cashiers));
 
-  // Build the WhatsApp message
+  // Sync to Firebase
+  try {
+    await setDoc(doc(db, "stores", storeId, "cashiers", cashierId), {
+      ...newCashier,
+      timestamp: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn("Firestore cashier sync error:", err);
+  }
+
+  // Build the WhatsApp invite message
   const origin = window.location.origin;
   const joinUrl = `${origin}/?code=${store.storeCode}&pin=${pin}`;
   const whatsappText = `*Welcome to ${store.name}!* 🎉\n` +
@@ -294,32 +383,45 @@ export function addCashierToStore({ storeId, name, pin, phone }) {
   };
 }
 
-export function removeCashierFromStore(storeId, cashierId) {
+export async function removeCashierFromStore(storeId, cashierId) {
   const cashiers = getStoreCashiers(storeId).filter(c => c.id !== cashierId);
   localStorage.setItem(getStoreKey(storeId, 'cashiers'), JSON.stringify(cashiers));
+
+  try {
+    await deleteDoc(doc(db, "stores", storeId, "cashiers", cashierId));
+  } catch (err) {}
+
   return cashiers;
 }
 
-// Cashier verification: strictly requires matching storeCode AND that store's PIN
-export function verifyCashierLogin(storeCode, pin) {
-  const store = getStoreByCode(storeCode);
+export async function verifyCashierLogin(storeCode, pin) {
+  if (!storeCode || !pin) {
+    return { success: false, message: "Store Code and 4-digit PIN are required." };
+  }
+
+  const cleanCode = storeCode.trim().toUpperCase();
+  let store = getStoreByCode(cleanCode);
+
+  // If not found in local cache, search in live Firestore
   if (!store) {
-    return { success: false, message: `Store Code "${storeCode}" was not found.` };
+    try {
+      const q = query(collection(db, "stores"), where("storeCode", "==", cleanCode));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const docItem = snap.docs[0];
+        store = { id: docItem.id, ...docItem.data() };
+        saveStoreLocally(store);
+      }
+    } catch (e) {
+      console.warn("Firestore store search error:", e);
+    }
   }
 
-  const cashiers = getStoreCashiers(store.id);
-  const matchingCashier = cashiers.find(c => c.pin === pin && c.status === "active");
-
-  if (matchingCashier) {
-    return {
-      success: true,
-      store: store,
-      cashier: matchingCashier,
-      role: "cashier"
-    };
+  if (!store) {
+    return { success: false, message: `Store Code "${cleanCode}" was not found.` };
   }
 
-  // Allow store owner to use their admin PIN on cashier POS
+  // Check store admin PIN
   if (store.adminPin === pin) {
     return {
       success: true,
@@ -329,7 +431,28 @@ export function verifyCashierLogin(storeCode, pin) {
     };
   }
 
-  return { success: false, message: "Incorrect PIN for this store. Please re-enter." };
+  // Check cashier PINs
+  let cashiers = getStoreCashiers(store.id);
+  if (cashiers.length === 0) {
+    // Try fetching from Firestore
+    try {
+      const snap = await getDocs(collection(db, "stores", store.id, "cashiers"));
+      cashiers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      localStorage.setItem(getStoreKey(store.id, 'cashiers'), JSON.stringify(cashiers));
+    } catch (e) {}
+  }
+
+  const matchingCashier = cashiers.find(c => c.pin === pin && c.status === "active");
+  if (matchingCashier) {
+    return {
+      success: true,
+      store: store,
+      cashier: matchingCashier,
+      role: "cashier"
+    };
+  }
+
+  return { success: false, message: "Incorrect PIN for this store. Please verify your 4-digit PIN." };
 }
 
 // ==========================================
@@ -344,12 +467,11 @@ export function getStoreSales(storeId) {
   return [];
 }
 
-export function recordStoreSale(storeId, { items, cashierName, paymentMethod }) {
+export async function recordStoreSale(storeId, { items, cashierName, paymentMethod }) {
   const products = getStoreProducts(storeId);
   let totalAmount = 0;
   let totalProfit = 0;
 
-  // Deduct stock and calculate profit
   items.forEach(cartItem => {
     const prod = products.find(p => p.id === cartItem.id);
     if (prod) {
@@ -360,13 +482,14 @@ export function recordStoreSale(storeId, { items, cashierName, paymentMethod }) 
     totalAmount += cartItem.price * cartItem.quantity;
   });
 
-  // Save updated product stocks
   localStorage.setItem(getStoreKey(storeId, 'products'), JSON.stringify(products));
 
   const sales = getStoreSales(storeId);
   const receiptNo = "SL-" + Date.now().toString().slice(-6) + "-" + Math.floor(100 + Math.random() * 900);
+  const saleId = "sale_" + Date.now();
+
   const newSale = {
-    id: "sale_" + Date.now(),
+    id: saleId,
     receiptNumber: receiptNo,
     date: new Date().toISOString().slice(0, 10),
     timestamp: Date.now(),
@@ -389,6 +512,25 @@ export function recordStoreSale(storeId, { items, cashierName, paymentMethod }) 
   sales.unshift(newSale);
   localStorage.setItem(getStoreKey(storeId, 'sales'), JSON.stringify(sales));
 
+  // Sync Sale & Stock Deductions to Firestore
+  try {
+    await setDoc(doc(db, "stores", storeId, "sales", saleId), {
+      ...newSale,
+      serverTime: serverTimestamp()
+    });
+
+    for (let item of items) {
+      const prod = products.find(p => p.id === item.id);
+      if (prod) {
+        await updateDoc(doc(db, "stores", storeId, "products", item.id), {
+          stock: prod.stock
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("Firestore sale sync notice:", err);
+  }
+
   return { sale: newSale, updatedProducts: products };
 }
 
@@ -401,18 +543,15 @@ export function getStoreExpenses(storeId) {
   if (stored) {
     try { return JSON.parse(stored); } catch (e) {}
   }
-  const store = getStoreById(storeId);
-  if (store && store.expenses) {
-    localStorage.setItem(getStoreKey(storeId, 'expenses'), JSON.stringify(store.expenses));
-    return store.expenses;
-  }
   return [];
 }
 
-export function addStoreExpense(storeId, { title, category, amount, note }) {
+export async function addStoreExpense(storeId, { title, category, amount, note }) {
   const expenses = getStoreExpenses(storeId);
+  const expId = "exp_" + Date.now();
+
   const newExp = {
-    id: "exp_" + Date.now(),
+    id: expId,
     title: title.trim(),
     category: category || "Miscellaneous",
     amount: Number(amount) || 0,
@@ -420,18 +559,34 @@ export function addStoreExpense(storeId, { title, category, amount, note }) {
     date: new Date().toISOString().slice(0, 10),
     timestamp: Date.now()
   };
+
   expenses.unshift(newExp);
   localStorage.setItem(getStoreKey(storeId, 'expenses'), JSON.stringify(expenses));
+
+  try {
+    await setDoc(doc(db, "stores", storeId, "expenses", expId), {
+      ...newExp,
+      serverTime: serverTimestamp()
+    });
+  } catch (err) {
+    console.warn("Firestore expense sync notice:", err);
+  }
+
   return expenses;
 }
 
-export function deleteStoreExpense(storeId, expenseId) {
+export async function deleteStoreExpense(storeId, expenseId) {
   const expenses = getStoreExpenses(storeId).filter(e => e.id !== expenseId);
   localStorage.setItem(getStoreKey(storeId, 'expenses'), JSON.stringify(expenses));
+
+  try {
+    await deleteDoc(doc(db, "stores", storeId, "expenses", expenseId));
+  } catch (err) {}
+
   return expenses;
 }
 
-// Formatting
+// Formatting currency
 export function formatNaira(amount) {
   const num = Number(amount) || 0;
   return '₦' + num.toLocaleString('en-NG', { minimumFractionDigits: 0, maximumFractionDigits: 0 });

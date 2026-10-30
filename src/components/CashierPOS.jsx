@@ -75,9 +75,9 @@ export default function CashierPOS({ store, cashierName, onSwitchToAdmin, onBack
   const totalItemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   // Checkout
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (cart.length === 0) return;
-    const { sale, updatedProducts } = recordStoreSale(store.id, {
+    const { sale, updatedProducts } = await recordStoreSale(store.id, {
       items: cart,
       cashierName,
       paymentMethod
